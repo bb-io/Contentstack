@@ -1,7 +1,8 @@
-﻿using Blackbird.Applications.Sdk.Common.Authentication;
+﻿using Apps.Contentstack.Constants;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
 
-namespace Apps.App.Connections;
+namespace Apps.Contentstack.Connections;
 
 public class ConnectionDefinition : IConnectionDefinition
 {
@@ -14,6 +15,13 @@ public class ConnectionDefinition : IConnectionDefinition
             ConnectionUsage = ConnectionUsage.Actions,
             ConnectionProperties = new List<ConnectionProperty>
             {
+                new(CredsNames.Host)
+                {
+                    DisplayName =
+                        "Host (api.contentstack.io, eu-api.contentstack.com, azure-na-api.contentstack.com, azure-eu-api.contentstack.com)"
+                },
+                new(CredsNames.StackApiKey) { DisplayName = "Stack API key", Sensitive = true },
+                new(CredsNames.ManagementToken) { DisplayName = "Management token", Sensitive = true }
             }
         }
     };

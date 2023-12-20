@@ -1,9 +1,9 @@
-using Apps.App.Api;
+using Apps.Contentstack.Api;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
-namespace Apps.App.Invocables;
+namespace Apps.Contentstack.Invocables;
 
 public class AppInvocable : BaseInvocable
 {
@@ -13,6 +13,6 @@ public class AppInvocable : BaseInvocable
     protected AppClient Client { get; }
     public AppInvocable(InvocationContext invocationContext) : base(invocationContext)
     {
-        Client = new();
+        Client = new(Creds);
     }
 }
