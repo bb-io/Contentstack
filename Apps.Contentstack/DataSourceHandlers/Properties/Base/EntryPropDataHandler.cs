@@ -1,8 +1,11 @@
+using Apps.Contentstack.Constants;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Response.ContentType;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.DataSourceHandlers.Properties.Base;
 
@@ -33,10 +36,18 @@ public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceHandl
         var response = await Client.ContentType(ContentTypeId).FetchAsync();
         var contentType = Client.ProcessResponse<ContentTypeResponse>(response).ContentType;
 
-        return contentType.Schema
+        var allSchemas = contentType.Schema.Descendants()
+            .Where(x => x is JObject && x["schema"] is not null)
+            .SelectMany(x => x["schema"]!)
+            .Concat(contentType.Schema)
+            .Select(x => x.ToObject<SchemaResponse>(JsonSerializer.Create(JsonConfig.Settings))!)
+            .ToArray();
+
+        return allSchemas
             .Where(x => x.DataType == DataType)
             .Where(x => context.SearchString is null ||
                         x.DisplayName.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
+            .DistinctBy(x => x.Uid)
             .ToDictionary(x => x.Uid, x => x.DisplayName);
     }
 }

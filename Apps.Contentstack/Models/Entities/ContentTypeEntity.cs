@@ -1,4 +1,4 @@
-using Apps.Contentstack.Models.Response.ContentType;
+using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.Models.Entities;
 
@@ -10,5 +10,5 @@ public class ContentTypeEntity
     
     public DateTime CreatedAt { get; set; }
     
-    public IEnumerable<SchemaResponse> Schema { get; set; }
+    public JArray Schema { get; set; }
 }

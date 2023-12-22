@@ -2,6 +2,7 @@ using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Request.Asset;
 using Apps.Contentstack.Models.Response;
 using Apps.Contentstack.Models.Response.Asset;
+using Apps.Contentstack.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -20,7 +21,7 @@ public class AssetsActions : AppInvocable
     [Action("Download asset", Description = "Download content of a specific asset")]
     public async Task<FileResponse> DownloadAsset([ActionParameter] AssetRequest input)
     {
-        var response = await Client.Asset(input.AssetId).FetchAsync();
+        var response = await ContentstackErrorHandler.HandleRequest(() => Client.Asset(input.AssetId).FetchAsync());
         var asset = Client.ProcessResponse<AssetResponse>(response).Asset;
 
         var file = await FileDownloader.DownloadFileBytes(asset.Url);
@@ -34,6 +35,6 @@ public class AssetsActions : AppInvocable
     {
         var asset = new AssetModel(input.File.Name, new MemoryStream(input.File.Bytes), input.File.ContentType,
             input.Title, input.Description, input.ParentFolderId);
-        return Client.Asset().CreateAsync(asset);
+        return ContentstackErrorHandler.HandleRequest(() => Client.Asset().CreateAsync(asset));
     }
 }

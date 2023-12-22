@@ -1,5 +1,5 @@
 using Apps.Contentstack.DataSourceHandlers.Properties.Base;
-using Apps.Contentstack.Models.Request.Entry;
+using Apps.Contentstack.Models.Request.Property;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
