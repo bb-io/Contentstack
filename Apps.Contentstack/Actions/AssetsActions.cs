@@ -6,6 +6,7 @@ using Apps.Contentstack.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Utilities;
 using Contentstack.Management.Core.Models;
 
@@ -14,8 +15,12 @@ namespace Apps.Contentstack.Actions;
 [ActionList]
 public class AssetsActions : AppInvocable
 {
-    public AssetsActions(InvocationContext invocationContext) : base(invocationContext)
+    private readonly IFileManagementClient _fileManagementClient;
+
+    public AssetsActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(
+        invocationContext)
     {
+        _fileManagementClient = fileManagementClient;
     }
 
     [Action("Download asset", Description = "Download content of a specific asset")]
@@ -31,10 +36,12 @@ public class AssetsActions : AppInvocable
     }
 
     [Action("Upload asset", Description = "Upload a new asset")]
-    public Task UploadAsset([ActionParameter] UploadAssetRequest input)
+    public async Task UploadAsset([ActionParameter] UploadAssetRequest input)
     {
-        var asset = new AssetModel(input.File.Name, new MemoryStream(input.File.Bytes), input.File.ContentType,
+        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var asset = new AssetModel(input.File.Name, file, input.File.ContentType,
             input.Title, input.Description, input.ParentFolderId);
-        return ContentstackErrorHandler.HandleRequest(() => Client.Asset().CreateAsync(asset));
+        
+        await ContentstackErrorHandler.HandleRequest(() => Client.Asset().CreateAsync(asset));
     }
 }
