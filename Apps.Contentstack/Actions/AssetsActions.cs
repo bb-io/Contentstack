@@ -29,7 +29,7 @@ public class AssetsActions : AppInvocable
         var response = await ContentstackErrorHandler.HandleRequest(() => Client.Asset(input.AssetId).FetchAsync());
         var asset = Client.ProcessResponse<AssetResponse>(response).Asset;
 
-        var file = await FileDownloader.DownloadFileBytes(asset.Url);
+        var file = await FileDownloader.DownloadFileBytes(asset.Url, _fileManagementClient);
         file.Name = asset.Filename;
 
         return new(file);
