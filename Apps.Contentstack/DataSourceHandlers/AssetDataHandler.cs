@@ -1,7 +1,10 @@
+using Apps.Contentstack.Api;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Response.Asset;
+using Apps.Contentstack.Models.Response.ContentType;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers;
 
@@ -14,10 +17,10 @@ public class AssetDataHandler : AppInvocable, IAsyncDataSourceHandler
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        var response = await Client.Asset().Query().FindAsync();
-        var assets = Client.ProcessResponse<ListAssetsResponse>(response);
-
-        return assets.Assets
+        var request = new ContentstackRequest("v3/assets", Method.Get, Creds);
+        var response = await Client.ExecuteWithErrorHandling<ListAssetsResponse>(request);
+        
+        return response.Assets
             .Where(x => context.SearchString is null ||
                         x.Title.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.CreatedAt)

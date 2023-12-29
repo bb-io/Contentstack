@@ -10,7 +10,7 @@ public class AppInvocable : BaseInvocable
     protected AuthenticationCredentialsProvider[] Creds =>
         InvocationContext.AuthenticationCredentialsProviders.ToArray();
 
-    protected AppClient Client { get; }
+    protected ContentstackClient Client { get; }
     public AppInvocable(InvocationContext invocationContext) : base(invocationContext)
     {
         Client = new(Creds);

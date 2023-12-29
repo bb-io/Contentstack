@@ -1,7 +1,9 @@
+using Apps.Contentstack.Api;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Response.ContentType;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers;
 
@@ -14,10 +16,10 @@ public class ContentTypeDataHandler : AppInvocable, IAsyncDataSourceHandler
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        var response = await Client.ContentType().Query().FindAsync();
-        var items = Client.ProcessResponse<ListContentTypesResponse>(response).ContentTypes;
-
-        return items
+        var request = new ContentstackRequest("v3/content_types", Method.Get, Creds);
+        var response = await Client.ExecuteWithErrorHandling<ListContentTypesResponse>(request);
+        
+        return response.ContentTypes
             .Where(x => context.SearchString is null ||
                         x.Title.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.CreatedAt)
