@@ -1,7 +1,7 @@
 ﻿using Apps.Contentstack.Api;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
-using Contentstack.Management.Core.Exceptions;
+using RestSharp;
 
 namespace Apps.Contentstack.Connections;
 
@@ -11,22 +11,16 @@ public class ConnectionValidator : IConnectionValidator
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         CancellationToken cancellationToken)
     {
+        var creds = authenticationCredentialsProviders.ToArray();
+        var client = new ContentstackClient(creds);
+        var request = new ContentstackRequest("v3/assets", Method.Get, creds);
+        
         try
         {
-            var client = new AppClient(authenticationCredentialsProviders.ToArray());
-            await client.Asset().Query().FindAsync();
-
+            await client.ExecuteWithErrorHandling(request);
             return new()
             {
                 IsValid = true
-            };
-        }
-        catch (ContentstackErrorException ex)
-        {
-            return new()
-            {
-                IsValid = false,
-                Message = ex.ErrorMessage
             };
         }
         catch (Exception ex)

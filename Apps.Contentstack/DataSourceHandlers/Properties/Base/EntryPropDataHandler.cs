@@ -1,3 +1,4 @@
+using Apps.Contentstack.Api;
 using Apps.Contentstack.Constants;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Request.Entry;
@@ -6,6 +7,7 @@ using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers.Properties.Base;
 
@@ -33,16 +35,16 @@ public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceHandl
         if (string.IsNullOrWhiteSpace(EntryId))
             throw new("You have to input Entry first");
 
-        var response = await Client.ContentType(ContentTypeId).FetchAsync();
-        var contentType = Client.ProcessResponse<ContentTypeResponse>(response).ContentType;
-
-        var allSchemas = contentType.Schema.Descendants()
+        var request = new ContentstackRequest($"v3/content_types/{ContentTypeId}", Method.Get, Creds);
+        var response = await Client.ExecuteWithErrorHandling<ContentTypeResponse>(request);
+        
+        var allSchemas = response.ContentType.Schema.Descendants()
             .Where(x => x is JObject && x["schema"] is not null)
             .SelectMany(x => x["schema"]!)
-            .Concat(contentType.Schema)
+            .Concat(response.ContentType.Schema)
             .Select(x => x.ToObject<SchemaResponse>(JsonSerializer.Create(JsonConfig.Settings))!)
             .ToArray();
-
+        
         return allSchemas
             .Where(x => x.DataType == DataType)
             .Where(x => context.SearchString is null ||

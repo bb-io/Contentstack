@@ -1,14 +1,16 @@
+using Apps.Contentstack.Api;
 using Apps.Contentstack.Invocables;
-using Apps.Contentstack.Models;
+using Apps.Contentstack.Models.Entities;
 using Apps.Contentstack.Models.Request.Property;
 using Apps.Contentstack.Models.Response.ContentType;
 using Apps.Contentstack.Models.Response.Entry;
 using Apps.Contentstack.Models.Response.Property;
-using Apps.Contentstack.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using Newtonsoft.Json.Linq;
+using RestSharp;
 
 namespace Apps.Contentstack.Actions;
 
@@ -108,18 +110,13 @@ public class EntriesActions : AppInvocable
 
     private async Task SetEntryProperty<T>(string contentTypeId, string entryId, string property, T value)
     {
-        var contentType = Client.ContentType(contentTypeId);
-        var entry = contentType.Entry(entryId);
-        
-        var response = await entry.FetchAsync();
-        var entryObject = Client.ProcessResponse<EntryResponse>(response).Entry;
+        var entryObject = await GetEntryJObject(contentTypeId, entryId);
      
         var propertyValue = entryObject.Descendants()
             .First(x => x.Parent is JProperty prop && prop.Name == property) as JValue;
         propertyValue!.Value = value;
 
-        var contentTypeResponse = await contentType.FetchAsync();
-        var contentTypeObj = Client.ProcessResponse<ContentTypeResponse>(contentTypeResponse).ContentType;
+        var contentTypeObj = await GetContentType(contentTypeId);
 
         var fileProps = contentTypeObj.Schema
             .Descendants()
@@ -129,15 +126,28 @@ public class EntriesActions : AppInvocable
 
         fileProps.ForEach(x => RemovePropertyByName(entryObject, x));
 
-        await ContentstackErrorHandler.HandleRequest(() => entry.UpdateAsync(new EntryJObject(entryObject)));
+        var request = new ContentstackRequest($"v3/content_types/{contentTypeId}/entries/{entryId}", Method.Put, Creds)
+            .WithJsonBody(new
+            {
+                entry = entryObject
+            });
+        await Client.ExecuteWithErrorHandling(request);
     }
 
     private async Task<JObject> GetEntryJObject(string contentTypeId, string entryId)
     {
-        var response = await ContentstackErrorHandler.HandleRequest(() =>
-            Client.ContentType(contentTypeId).Entry(entryId).FetchAsync());
+        var request = new ContentstackRequest($"v3/content_types/{contentTypeId}/entries/{entryId}", Method.Get, Creds);
+        var response = await Client.ExecuteWithErrorHandling<EntryResponse>(request);
 
-        return Client.ProcessResponse<EntryResponse>(response).Entry;
+        return response.Entry;
+    }
+    
+    private async Task<ContentTypeEntity> GetContentType(string contentTypeId)
+    {
+        var request = new ContentstackRequest($"v3/content_types/{contentTypeId}", Method.Get, Creds);
+        var response = await Client.ExecuteWithErrorHandling<ContentTypeResponse>(request);
+
+        return response.ContentType;
     }
 
     private void RemovePropertyByName(JToken token, string propertyName)
