@@ -1,7 +1,6 @@
 using Apps.Contentstack.Api;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Response.Asset;
-using Apps.Contentstack.Models.Response.ContentType;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
