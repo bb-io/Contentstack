@@ -11,7 +11,7 @@ public class EntryDatePropDataHandler : EntryPropDataHandler
 
 
     public EntryDatePropDataHandler(InvocationContext invocationContext,
-        [ActionParameter] EntryDatePropRequest request) : base(invocationContext, request)
+        [ActionParameter] EntryDatePropRequest request) : base(invocationContext, request.EntryId, request.ContentTypeId)
     {
     }
 }
