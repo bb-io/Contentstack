@@ -4,9 +4,44 @@ Blackbird is the new automation backbone for the language technology industry. B
 
 ## Introduction
 
-<!-- begin docs -->
+<!-- begin docs -->  
 
-Documentation coming soon.
+Contentstack is a headless CMS technology assembled from a series of best-of-breed solutions. This Contentstack application primarily centers around entry and asset management.
+
+## Connecting
+
+1. Navigate to apps and search for Contentstack. If you cannot find Contentstack then click _Add App_ in the top right corner, select Contentstack and add the app to your Blackbird environment.
+2. Click _Add Connection_.
+3. Name your connection for future reference e.g. 'My client'.
+4. In the _Host_ field input one of the following values: api.contentstack.io, eu-api.contentstack.com, azure-na-api.contentstack.com, azure-eu-api.contentstack.com
+5. Go to your Contentstack _Stack settings_ and copy API key from the _API Credentials_ section
+6. Paste it to the _Stack API key_ field in Blackbird
+7. On the settings page go to _Tokens_, select _Management Tokens_ section and generate API management token with the parameters you need.
+8. Copy it to the _Management token_ field in Blackbird
+9. Click _Connect_.
+10. Confirm that the connection has appeared and the status is _Connected_.
+
+## Actions
+
+### Assets
+
+- **Download/Upload asset** downloads or uploads content for the asset.
+
+### Entries
+- **Get entry** returns details of the specific entry.
+- **Get entry string/number/date/boolean property** gets data of the specified entry's property.
+- **Set entry string/number/date/boolean property** sets data to the specified entry's property.
+
+## Events
+
+-   **On asset deleted**
+-   **On asset published**
+-   **On asset unpublished**
+-   **On entry created**
+-   **On entry deleted**
+-   **On entry published**
+-   **On entry unpublished**
+-   **On entry updated**
 
 ## Feedback
 

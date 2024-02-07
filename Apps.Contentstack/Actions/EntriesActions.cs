@@ -1,6 +1,7 @@
 using Apps.Contentstack.Api;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Entities;
+using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Request.Property;
 using Apps.Contentstack.Models.Response.ContentType;
 using Apps.Contentstack.Models.Response.Entry;
@@ -19,6 +20,18 @@ public class EntriesActions : AppInvocable
 {
     public EntriesActions(InvocationContext invocationContext) : base(invocationContext)
     {
+    }
+    
+    [Action("Get entry", Description = "Get details of a specific entry")]
+    public async Task<EntryEntity> GetEntry(
+        [ActionParameter] EntryRequest input)
+    {
+        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.EntryId}";
+        var request = new ContentstackRequest(endpoint, Method.Get, Creds);
+      
+        var response = await Client.ExecuteWithErrorHandling<EntryResponse>(request);
+
+        return response.Entry;
     }
 
     #region Get property
@@ -137,7 +150,7 @@ public class EntriesActions : AppInvocable
     private async Task<JObject> GetEntryJObject(string contentTypeId, string entryId)
     {
         var request = new ContentstackRequest($"v3/content_types/{contentTypeId}/entries/{entryId}", Method.Get, Creds);
-        var response = await Client.ExecuteWithErrorHandling<EntryResponse>(request);
+        var response = await Client.ExecuteWithErrorHandling<EntryGenericResponse>(request);
 
         return response.Entry;
     }

@@ -15,11 +15,7 @@ public class ConnectionDefinition : IConnectionDefinition
             ConnectionUsage = ConnectionUsage.Actions,
             ConnectionProperties = new List<ConnectionProperty>
             {
-                new(CredsNames.Host)
-                {
-                    DisplayName =
-                        "Host (api.contentstack.io, eu-api.contentstack.com, azure-na-api.contentstack.com, azure-eu-api.contentstack.com)"
-                },
+                new(CredsNames.Host) { DisplayName = "Host" },
                 new(CredsNames.StackApiKey) { DisplayName = "Stack API key", Sensitive = true },
                 new(CredsNames.ManagementToken) { DisplayName = "Management token", Sensitive = true }
             }

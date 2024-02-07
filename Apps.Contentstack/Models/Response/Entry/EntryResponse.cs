@@ -1,8 +1,8 @@
-using Newtonsoft.Json.Linq;
+using Apps.Contentstack.Models.Entities;
 
 namespace Apps.Contentstack.Models.Response.Entry;
 
 public class EntryResponse
 {
-    public JObject Entry { get; set; }
+    public EntryEntity Entry { get; set; }
 }
