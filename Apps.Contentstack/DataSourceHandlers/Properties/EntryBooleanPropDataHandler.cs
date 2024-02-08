@@ -9,9 +9,9 @@ public class EntryBooleanPropDataHandler : EntryPropDataHandler
 {
     protected override string DataType => "boolean";
 
-
     public EntryBooleanPropDataHandler(InvocationContext invocationContext,
-        [ActionParameter] EntryBooleanPropRequest request) : base(invocationContext, request)
+        [ActionParameter] EntryBooleanPropRequest request) : base(invocationContext, request.EntryId,
+        request.ContentTypeId)
     {
     }
 }

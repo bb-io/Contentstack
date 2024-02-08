@@ -1,7 +1,6 @@
 using Apps.Contentstack.Api;
 using Apps.Contentstack.Constants;
 using Apps.Contentstack.Invocables;
-using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Response.ContentType;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -19,10 +18,11 @@ public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceHandl
 
     protected abstract string DataType { get; }
 
-    protected EntryPropDataHandler(InvocationContext invocationContext, EntryRequest request) : base(invocationContext)
+    protected EntryPropDataHandler(InvocationContext invocationContext, string entryId, string contentTypeId) : base(
+        invocationContext)
     {
-        EntryId = request.EntryId;
-        ContentTypeId = request.ContentTypeId;
+        EntryId = entryId;
+        ContentTypeId = contentTypeId;
     }
 
 
@@ -37,14 +37,14 @@ public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceHandl
 
         var request = new ContentstackRequest($"v3/content_types/{ContentTypeId}", Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling<ContentTypeResponse>(request);
-        
+
         var allSchemas = response.ContentType.Schema.Descendants()
             .Where(x => x is JObject && x["schema"] is not null)
             .SelectMany(x => x["schema"]!)
             .Concat(response.ContentType.Schema)
             .Select(x => x.ToObject<SchemaResponse>(JsonSerializer.Create(JsonConfig.Settings))!)
             .ToArray();
-        
+
         return allSchemas
             .Where(x => x.DataType == DataType)
             .Where(x => context.SearchString is null ||

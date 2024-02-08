@@ -1,22 +1,20 @@
 using Apps.Contentstack.Api;
 using Apps.Contentstack.Invocables;
-using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Response.Entry;
-using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 
-namespace Apps.Contentstack.DataSourceHandlers;
+namespace Apps.Contentstack.DataSourceHandlers.Entry.Base;
 
 public class EntryDataHandler : AppInvocable, IAsyncDataSourceHandler
 {
     private string ContentTypeId { get; }
 
-    public EntryDataHandler(InvocationContext invocationContext, [ActionParameter] EntryRequest entryRequest) : base(
+    public EntryDataHandler(InvocationContext invocationContext, string contentTypeId) : base(
         invocationContext)
     {
-        ContentTypeId = entryRequest.ContentTypeId;
+        ContentTypeId = contentTypeId;
     }
 
 

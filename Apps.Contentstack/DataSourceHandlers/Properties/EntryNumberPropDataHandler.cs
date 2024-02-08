@@ -11,7 +11,7 @@ public class EntryNumberPropDataHandler : EntryPropDataHandler
 
 
     public EntryNumberPropDataHandler(InvocationContext invocationContext,
-        [ActionParameter] EntryNumberPropRequest request) : base(invocationContext, request)
+        [ActionParameter] EntryNumberPropRequest request) : base(invocationContext, request.EntryId, request.ContentTypeId)
     {
     }
 }
