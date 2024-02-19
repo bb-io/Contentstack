@@ -1,14 +1,14 @@
-using Blackbird.Applications.Sdk.Common;
+using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.Models.Entities;
 
-public class ContentTypeEntity
+public class ContentTypeContentEntity
 {
-    [Display("Content type UID")]
     public string Uid { get; set; }
     
     public string Title { get; set; }
     
-    [Display("Created at")]
     public DateTime CreatedAt { get; set; }
+    
+    public JArray Schema { get; set; }
 }

@@ -18,4 +18,7 @@ public class EntryEntity
     [Display("In progress")]
     [JsonProperty("_in_progress")]
     public bool InProgress { get; set; }
+    
+    [JsonProperty("_workflow")]
+    public WorkflowEntity? Workflow { get; set; }
 }
