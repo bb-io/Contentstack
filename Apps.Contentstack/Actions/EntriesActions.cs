@@ -57,7 +57,7 @@ public class EntriesActions : AppInvocable
     {
         var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.EntryId}";
         var request = new ContentstackRequest(endpoint, Method.Get, Creds);
-      
+
         var response = await Client.ExecuteWithErrorHandling<EntryResponse>(request);
 
         return response.Entry;
@@ -156,8 +156,10 @@ public class EntriesActions : AppInvocable
     public async Task<FileResponse> GetEntryAsHtml(
         [ActionParameter] EntryRequest input)
     {
+        var contentType = await GetContentType(input.ContentTypeId);
+
         var entry = await GetEntryJObject(input.ContentTypeId, input.EntryId);
-        var html = JsonToHtmlConverter.ToHtml(entry);
+        var html = JsonToHtmlConverter.ToHtml(entry, contentType);
 
         var file = await _fileManagementClient.UploadAsync(new MemoryStream(html), MediaTypeNames.Text.Html,
             $"{input.EntryId}.html");
@@ -173,13 +175,7 @@ public class EntriesActions : AppInvocable
         var file = await _fileManagementClient.DownloadAsync(fileRequest.File);
         var entry = await GetEntryJObject(input.ContentTypeId, input.EntryId);
 
-        var html = HtmlToJsonConverter.ToJson(file);
-        html.Children().ToList().ForEach(x =>
-        {
-            var property = x as JProperty;
-            entry[property!.Name] = property.Value;
-        });
-        
+        HtmlToJsonConverter.UpdateEntryFromHtml(file, entry);
         await UpdateEntry(input.ContentTypeId, input.EntryId, entry);
     }
 
