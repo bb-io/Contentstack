@@ -13,7 +13,6 @@ public static class JsonToHtmlConverter
     public static byte[] ToHtml(JObject entry, ContentTypeContentEntity contentType)
     {
         var (doc, body) = PrepareEmptyHtmlDocument();
-        body.SetAttributeValue(ConversionConstants.OriginalAttr, entry.ToString());
 
         ParseEntryToHtml(entry, contentType, doc, body);
 
