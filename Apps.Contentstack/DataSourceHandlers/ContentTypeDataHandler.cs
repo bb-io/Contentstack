@@ -19,7 +19,7 @@ public class ContentTypeDataHandler : AppInvocable, IAsyncDataSourceHandler
         var request = new ContentstackRequest("v3/content_types", Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling<ListContentTypesResponse>(request);
         
-        return response.ContentTypes
+        return response.Items
             .Where(x => context.SearchString is null ||
                         x.Title.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.CreatedAt)

@@ -1,8 +1,10 @@
 using Apps.Contentstack.Models.Entities;
+using Newtonsoft.Json;
 
 namespace Apps.Contentstack.Models.Response.ContentType;
 
-public class ListContentTypesResponse
+public class ListContentTypesResponse : ListResponse<ContentTypeEntity>
 {
-    public IEnumerable<ContentTypeEntity> ContentTypes { get; set; }
+    [JsonProperty("content_types")]
+    public override IEnumerable<ContentTypeEntity> Items { get; set; }
 }
