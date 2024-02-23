@@ -27,10 +27,16 @@ Contentstack is a headless CMS technology assembled from a series of best-of-bre
 
 - **Download/Upload asset** downloads or uploads content for the asset.
 
+### Content types
+- **List content types**
+
 ### Entries
 - **Get entry** returns details of the specific entry.
 - **Get entry string/number/date/boolean property** gets data of the specified entry's property.
 - **Set entry string/number/date/boolean property** sets data to the specified entry's property.
+- **Search entries** returns a list of entries based on provided filter criterias.
+- **Get entry content as HTML** returns entry content converted to an HTML file.
+- **Update entry content from HTML** updates entry content from HTML file.
 
 ## Events
 
