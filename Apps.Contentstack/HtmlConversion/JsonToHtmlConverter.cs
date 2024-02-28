@@ -62,7 +62,7 @@ public static class JsonToHtmlConverter
             var block = x.First as JProperty;
             var blockName = block!.Name;
 
-            var contentType = entryProperty.Blocks.First(x => x.Title == blockName);
+            var contentType = entryProperty.Blocks.First(x => x.Uid == blockName);
             ParseEntryToHtml((block.Value as JObject)!, contentType, doc, body);
         });
     }
