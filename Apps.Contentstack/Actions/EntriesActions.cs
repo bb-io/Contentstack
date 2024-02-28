@@ -212,7 +212,14 @@ public class EntriesActions : AppInvocable
                 entry = entryObject
             });
 
-        await Client.ExecuteWithErrorHandling(request);
+        try
+        {
+            await Client.ExecuteWithErrorHandling(request);
+        }
+        catch
+        {
+            throw new($"Entry update failed. Entry JSON: {entryObject}; Content type schema: {contentTypeObj.Schema}");
+        }
     }
 
     private async Task<JObject> GetEntryJObject(string contentTypeId, string entryId)

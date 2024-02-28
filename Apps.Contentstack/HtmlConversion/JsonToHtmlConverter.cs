@@ -12,11 +12,18 @@ public static class JsonToHtmlConverter
 {
     public static byte[] ToHtml(JObject entry, ContentTypeContentEntity contentType)
     {
-        var (doc, body) = PrepareEmptyHtmlDocument();
+        try
+        {
+            var (doc, body) = PrepareEmptyHtmlDocument();
 
-        ParseEntryToHtml(entry, contentType, doc, body);
+            ParseEntryToHtml(entry, contentType, doc, body);
 
-        return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
+            return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
+        }
+        catch
+        {
+            throw new($"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}");
+        }
     }
 
     private static void ParseEntryToHtml(JObject entry, ContentTypeContentEntity contentType, HtmlDocument doc,

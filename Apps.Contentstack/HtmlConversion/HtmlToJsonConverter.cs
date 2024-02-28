@@ -12,16 +12,23 @@ public class HtmlToJsonConverter
         var doc = new HtmlDocument();
         doc.Load(file);
 
-        var localizableNodes = doc.DocumentNode.Descendants()
-            .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
-            .ToList();
-        
-        localizableNodes.ForEach(x =>
+        try
         {
-            var path = x.Attributes[ConversionConstants.PathAttr].Value!;
-            var propertyValue = entry.SelectToken(path);
-            
-            (propertyValue as JValue)!.Value = HttpUtility.HtmlDecode(x.InnerHtml.Trim());
-        });
+            var localizableNodes = doc.DocumentNode.Descendants()
+                .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
+                .ToList();
+
+            localizableNodes.ForEach(x =>
+            {
+                var path = x.Attributes[ConversionConstants.PathAttr].Value!;
+                var propertyValue = entry.SelectToken(path);
+
+                (propertyValue as JValue)!.Value = HttpUtility.HtmlDecode(x.InnerHtml.Trim());
+            });
+        }
+        catch
+        {
+            throw new($"Conversion to JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}");
+        }
     }
 }
