@@ -10,7 +10,7 @@ namespace Apps.Contentstack.HtmlConversion;
 
 public static class JsonToHtmlConverter
 {
-    public static byte[] ToHtml(JObject entry, ContentTypeContentEntity contentType)
+    public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType)
     {
         try
         {
@@ -26,26 +26,27 @@ public static class JsonToHtmlConverter
         }
     }
 
-    private static void ParseEntryToHtml(JObject entry, ContentTypeContentEntity contentType, HtmlDocument doc,
+    private static void ParseEntryToHtml(JObject entry, ContentTypeBlockEntity contentType, HtmlDocument doc,
         HtmlNode body)
     {
         contentType.Schema.GetLocalizableFields().ForEach(x =>
         {
             var property = entry[x.Uid];
 
-            if (x.DataType == "json")
+            switch (x.DataType)
             {
-                JsonRichTextToHtml(doc, body, (property as JObject)!);
-                return;
+                case "json":
+                    JsonRichTextToHtml(doc, body, (property as JObject)!);
+                    break;
+                case "blocks":
+                    BlocksToHtml(doc, body, (property as JArray)!, x);
+                    break;
+                case "global_field":
+                    GlobalFieldToHtml(doc, body, (property as JObject)!, x);
+                    break;
             }
 
-            if (x.DataType == "blocks")
-            {
-                BlocksToHtml(doc, body, (property as JArray)!, x);
-                return;
-            }
-
-            if (property.Type != JTokenType.String)
+            if (property?.Type != JTokenType.String)
                 return;
 
             AppendContent(doc, body, property, HtmlConstants.Div);
@@ -78,6 +79,14 @@ public static class JsonToHtmlConverter
 
         contentNodes.ForEach(x => AppendContent(doc, richTextNode, x, HtmlConstants.Span));
         body.AppendChild(richTextNode);
+    }
+
+    private static void GlobalFieldToHtml(HtmlDocument doc, HtmlNode body, JObject property, EntryProperty entryProperty)
+    {
+        ParseEntryToHtml(property, new()
+        {
+            Schema = entryProperty.Schema
+        }, doc, body);
     }
 
     private static void AppendContent(HtmlDocument doc, HtmlNode parentNode, JToken property, string htmlTag)

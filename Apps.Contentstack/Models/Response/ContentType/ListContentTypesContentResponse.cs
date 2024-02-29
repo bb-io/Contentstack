@@ -4,5 +4,5 @@ namespace Apps.Contentstack.Models.Response.ContentType;
 
 public class ListContentTypesContentResponse
 {
-    public IEnumerable<ContentTypeContentEntity> ContentTypes { get; set; }
+    public IEnumerable<ContentTypeBlockEntity> ContentTypes { get; set; }
 }
