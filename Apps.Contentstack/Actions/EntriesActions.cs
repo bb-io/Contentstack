@@ -232,7 +232,9 @@ public class EntriesActions : AppInvocable
 
     private async Task<ContentTypeContentEntity> GetContentType(string contentTypeId)
     {
-        var request = new ContentstackRequest($"v3/content_types/{contentTypeId}", Method.Get, Creds);
+        var endpoint = $"v3/content_types/{contentTypeId}"
+            .SetQueryParameter("include_global_field_schema", "true");
+        var request = new ContentstackRequest(endpoint, Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling<ContentTypeResponse>(request);
 
         return response.ContentType;
