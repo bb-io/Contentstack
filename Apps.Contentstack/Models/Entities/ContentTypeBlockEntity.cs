@@ -2,7 +2,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.Models.Entities;
 
-public class ContentTypeContentEntity
+public class ContentTypeBlockEntity
 {
     public string Uid { get; set; }
 

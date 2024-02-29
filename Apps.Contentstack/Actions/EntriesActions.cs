@@ -230,7 +230,7 @@ public class EntriesActions : AppInvocable
         return response.Entry;
     }
 
-    private async Task<ContentTypeContentEntity> GetContentType(string contentTypeId)
+    private async Task<ContentTypeBlockEntity> GetContentType(string contentTypeId)
     {
         var endpoint = $"v3/content_types/{contentTypeId}"
             .SetQueryParameter("include_global_field_schema", "true");
