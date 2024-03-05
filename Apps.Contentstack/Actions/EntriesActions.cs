@@ -7,6 +7,7 @@ using Apps.Contentstack.Models.Request;
 using Apps.Contentstack.Models.Request.ContentType;
 using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Request.Property;
+using Apps.Contentstack.Models.Request.Workflow;
 using Apps.Contentstack.Models.Response;
 using Apps.Contentstack.Models.Response.ContentType;
 using Apps.Contentstack.Models.Response.Entry;
@@ -36,7 +37,7 @@ public class EntriesActions : AppInvocable
     [Action("Search entries", Description = "Search for entries based on the provided filters")]
     public async Task<ListEntriesResponse> SearchEntries(
         [ActionParameter] ContentTypeRequest contentType,
-        [ActionParameter] SearchEntriesRequest input)
+        [ActionParameter] WorkflowStageFilterRequest input)
     {
         var endpoint = $"v3/content_types/{contentType.ContentTypeId}/entries"
             .SetQueryParameter("include_workflow", "true");
@@ -47,7 +48,7 @@ public class EntriesActions : AppInvocable
         return new()
         {
             Entries = result.Entries
-                .Where(x => input.WorkflowStage is null || x.Workflow?.Name == input.WorkflowStage)
+                .Where(x => input.WorkflowStageId is null || x.Workflow?.Uid == input.WorkflowStageId)
         };
     }
 
@@ -61,6 +62,27 @@ public class EntriesActions : AppInvocable
         var response = await Client.ExecuteWithErrorHandling<EntryResponse>(request);
 
         return response.Entry;
+    }
+    
+    [Action("Set entry workflow stage", Description = "Set different workflow stage for a specific entry")]
+    public Task SetEntryWorkflowStage(
+        [ActionParameter] EntryRequest entry,
+        [ActionParameter] WorkflowStageRequest input)
+    {
+        var endpoint = $"v3/content_types/{entry.ContentTypeId}/entries/{entry.EntryId}/workflow";
+        var request = new ContentstackRequest(endpoint, Method.Post, Creds)
+            .WithJsonBody(new
+            {
+                workflow = new
+                {
+                    workflow_stage = new
+                    {
+                        uid = input.WorkflowStageId
+                    }
+                }
+            });
+
+        return Client.ExecuteWithErrorHandling(request);
     }
 
     #region Get property

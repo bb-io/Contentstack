@@ -20,5 +20,5 @@ public class EntryEntity
     public bool InProgress { get; set; }
     
     [JsonProperty("_workflow")]
-    public WorkflowEntity? Workflow { get; set; }
+    public WorkflowStageEntity? Workflow { get; set; }
 }
