@@ -20,9 +20,9 @@ public static class JsonToHtmlConverter
 
             return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
         }
-        catch
+        catch(Exception ex)
         {
-            throw new($"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}");
+            throw new($"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}; Exception: {ex}");
         }
     }
 
@@ -53,9 +53,9 @@ public static class JsonToHtmlConverter
         });
     }
 
-    private static void BlocksToHtml(HtmlDocument doc, HtmlNode body, JArray blocks, EntryProperty entryProperty)
+    private static void BlocksToHtml(HtmlDocument doc, HtmlNode body, JArray? blocks, EntryProperty entryProperty)
     {
-        if (entryProperty.Blocks is null)
+        if (entryProperty.Blocks is null || blocks is null)
             return;
 
         blocks.ToList().ForEach(x =>
