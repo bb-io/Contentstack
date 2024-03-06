@@ -26,9 +26,9 @@ public class HtmlToJsonConverter
                 (propertyValue as JValue)!.Value = HttpUtility.HtmlDecode(x.InnerHtml.Trim());
             });
         }
-        catch
+        catch(Exception ex)
         {
-            throw new($"Conversion to JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}");
+            throw new($"Conversion to JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}; Exception: {ex}");
         }
     }
 }
