@@ -68,8 +68,11 @@ public static class JsonToHtmlConverter
         });
     }
 
-    private static void JsonRichTextToHtml(HtmlDocument doc, HtmlNode body, JObject property)
+    private static void JsonRichTextToHtml(HtmlDocument doc, HtmlNode body, JObject? property)
     {
+        if (property is null)
+            return;
+        
         var richTextNode = doc.CreateElement(HtmlConstants.Div);
 
         var contentNodes = property.Descendants()
@@ -81,8 +84,11 @@ public static class JsonToHtmlConverter
         body.AppendChild(richTextNode);
     }
 
-    private static void GlobalFieldToHtml(HtmlDocument doc, HtmlNode body, JObject property, EntryProperty entryProperty)
+    private static void GlobalFieldToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty)
     {
+        if(property is null || entryProperty.Schema is null)
+            return;
+        
         ParseEntryToHtml(property, new()
         {
             Schema = entryProperty.Schema
