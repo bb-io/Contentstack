@@ -8,7 +8,7 @@ public class WorkflowStageFilterRequest
 {
     [Display("Workflow ID")]
     [DataSource(typeof(WorkflowDataHandler))]
-    public string? WorkflowId { get; set; }
+    public string? WorkId { get; set; }
     
     [Display("Workflow stage")]
     [DataSource(typeof(WorkflowStageFilterDataHandler))]

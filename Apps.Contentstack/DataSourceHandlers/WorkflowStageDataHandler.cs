@@ -16,7 +16,7 @@ public class WorkflowStageDataHandler : AppInvocable, IAsyncDataSourceHandler
     public WorkflowStageDataHandler(InvocationContext invocationContext,
         [ActionParameter] WorkflowStageRequest filterRequest) : base(invocationContext)
     {
-        WorkflowId = filterRequest.WorkflowId;
+        WorkflowId = filterRequest.WorkId;
     }
 
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
