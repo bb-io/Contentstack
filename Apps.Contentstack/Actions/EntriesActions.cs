@@ -238,9 +238,9 @@ public class EntriesActions : AppInvocable
         {
             await Client.ExecuteWithErrorHandling(request);
         }
-        catch
+        catch(Exception ex)
         {
-            throw new($"Entry update failed. Entry JSON: {entryObject}; Content type schema: {contentTypeObj.Schema}");
+            throw new($"Entry update failed. Entry JSON: {entryObject}; Content type schema: {contentTypeObj.Schema}; Exception: {ex}");
         }
     }
 
