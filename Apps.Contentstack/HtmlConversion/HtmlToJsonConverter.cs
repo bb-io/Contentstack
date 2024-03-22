@@ -28,7 +28,8 @@ public class HtmlToJsonConverter
         }
         catch(Exception ex)
         {
-            throw new($"Conversion to JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}; Exception: {ex}");
+            throw new($"Conversion to JSON failed. Exception: {ex}");
+            // throw new($"Conversion to JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}; Exception: {ex}");
         }
     }
 }
