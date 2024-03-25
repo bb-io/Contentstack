@@ -22,7 +22,8 @@ public static class JsonToHtmlConverter
         }
         catch(Exception ex)
         {
-            throw new($"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}; Exception: {ex}");
+            throw new($"Conversion to HTML failed. Exception: {ex}");
+            // throw new($"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}; Exception: {ex}");
         }
     }
 
