@@ -1,5 +1,6 @@
 using System.Web;
 using Apps.Contentstack.HtmlConversion.Constants;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
 
@@ -7,7 +8,7 @@ namespace Apps.Contentstack.HtmlConversion;
 
 public class HtmlToJsonConverter
 {
-    public static void UpdateEntryFromHtml(Stream file, JObject entry)
+    public static void UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger)
     {
         var doc = new HtmlDocument();
         doc.Load(file);
@@ -28,8 +29,8 @@ public class HtmlToJsonConverter
         }
         catch(Exception ex)
         {
-            throw new($"Conversion to JSON failed. Exception: {ex}");
-            // throw new($"Conversion to JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}; Exception: {ex}");
+            logger?.LogError.Invoke($"Conversion to Contentstack JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}; Exception: {ex}", null);
+            throw new("The HTML file structure should match the source article");
         }
     }
 }
