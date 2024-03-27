@@ -6,11 +6,7 @@ namespace Apps.Contentstack.Models.Request.Workflow;
 
 public class WorkflowStageFilterRequest
 {
-    [Display("Workflow ID")]
-    [DataSource(typeof(WorkflowDataHandler))]
-    public string? WorkId { get; set; }
-    
     [Display("Workflow stage")]
-    [DataSource(typeof(WorkflowStageFilterDataHandler))]
+    [DataSource(typeof(WorkflowStageDataHandler))]
     public string? WorkflowStageId { get; set; }
 }
