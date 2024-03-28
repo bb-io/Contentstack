@@ -3,6 +3,7 @@ using Apps.Contentstack.Extensions;
 using Apps.Contentstack.HtmlConversion.Constants;
 using Apps.Contentstack.Models;
 using Apps.Contentstack.Models.Entities;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
 
@@ -10,7 +11,7 @@ namespace Apps.Contentstack.HtmlConversion;
 
 public static class JsonToHtmlConverter
 {
-    public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType)
+    public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType, Logger? logger)
     {
         try
         {
@@ -22,8 +23,8 @@ public static class JsonToHtmlConverter
         }
         catch(Exception ex)
         {
-            throw new($"Conversion to HTML failed. Exception: {ex}");
-            // throw new($"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}; Exception: {ex}");
+            logger?.LogError.Invoke($"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}; Exception: {ex}", null);
+            throw new("Conversion to HTML failed.");
         }
     }
 
