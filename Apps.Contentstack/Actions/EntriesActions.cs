@@ -264,7 +264,7 @@ public class EntriesActions : AppInvocable
         catch (Exception ex)
         {
             throw new(
-                $"Entry update failed. Entry JSON: {entryObject}; Content type schema: {contentTypeObj.Schema}; Exception: {ex}");
+                $"Entry update failed. Exception: {ex}; Exception type: {ex.GetType().Name}; Content type schema: {contentTypeObj.Schema}; Entry JSON: {entryObject};");
         }
     }
 
