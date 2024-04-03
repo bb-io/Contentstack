@@ -18,11 +18,24 @@ public class WorkflowStageDataHandler : AppInvocable, IAsyncDataSourceHandler
     {
         var request = new ContentstackRequest("v3/workflows/", Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling<ListWorkflowsResponse>(request);
-
-        return response.Workflows
-            .SelectMany(y => y.WorkflowStages.Select(x => (x.Uid, $"{y.Name} - {x.Name}")))
-            .Where(x => context.SearchString is null ||
-                        x.Item2.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
-            .ToDictionary(x => x.Uid, x => x.Item2);
+        
+        var dictionary = new Dictionary<string, string>();
+        foreach (var workflow in response.Workflows)
+        {
+            foreach (var stage in workflow.WorkflowStages)
+            {
+                if (context.SearchString is not null && !stage.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                
+                if(!dictionary.ContainsKey(stage.Uid))
+                {               
+                    dictionary.Add(stage.Uid, $"{workflow.Name} - {stage.Name}");
+                }
+            }
+        }
+        
+        return dictionary;
     }
 }
