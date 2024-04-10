@@ -35,6 +35,9 @@ public static class JsonToHtmlConverter
         {
             var property = entry[x.Uid];
 
+            if (property is null)
+                return; 
+            
             switch (x.DataType)
             {
                 case "json":
@@ -45,6 +48,9 @@ public static class JsonToHtmlConverter
                     break;
                 case "global_field":
                     GlobalFieldToHtml(doc, body, (property as JObject)!, x);
+                    break;
+                case "link":
+                    LinkToHtml(doc, body, property as JObject, x);
                     break;
             }
 
@@ -96,6 +102,16 @@ public static class JsonToHtmlConverter
             Schema = entryProperty.Schema
         }, doc, body);
     }
+    
+    private static void LinkToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty)
+    {
+        if (property is null)
+            return;
+        
+        AppendContent(doc, body, property["title"]!, HtmlConstants.Div);
+        AppendContent(doc, body, property["href"]!, HtmlConstants.Div);
+    }
+
 
     private static void AppendContent(HtmlDocument doc, HtmlNode parentNode, JToken property, string htmlTag)
     {
