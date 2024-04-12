@@ -49,10 +49,14 @@ public class EntriesActions : AppInvocable
         var request = new ContentstackRequest(endpoint, Method.Get, Creds);
         var result = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);
 
+        var entries = result.Entries
+            .Where(x => input.WorkflowStageId is null || x.Workflow?.Uid == input.WorkflowStageId)
+            .ToArray();
+        
         return new()
         {
-            Entries = result.Entries
-                .Where(x => input.WorkflowStageId is null || x.Workflow?.Uid == input.WorkflowStageId)
+            Entries = entries,
+            Count = entries.Length
         };
     }
 
