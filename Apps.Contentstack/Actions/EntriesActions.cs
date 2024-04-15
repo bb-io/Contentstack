@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using Apps.Contentstack.Api;
+using Apps.Contentstack.DataSourceHandlers;
 using Apps.Contentstack.HtmlConversion;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Entities;
@@ -14,6 +15,8 @@ using Apps.Contentstack.Models.Response.Entry;
 using Apps.Contentstack.Models.Response.Property;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
@@ -34,6 +37,35 @@ public class EntriesActions : AppInvocable
         _fileManagementClient = fileManagementClient;
     }
 
+    [Action("Calculate all entries", Description = "Calculate all entries")]
+    public async Task<CalculateAllEntriesResponse> CalculateAllEntries(
+        [ActionParameter, Display("Content types"), DataSource(typeof(ContentTypeDataHandler))]
+        IEnumerable<string>? contentTypesOptional)
+    {
+        var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes();
+        var entries = new List<EntryEntity>();
+
+        foreach (var contentType in contentTypes.Items)
+        {
+            if (contentTypesOptional != null && !contentTypesOptional.Contains(contentType.Uid))
+            {
+                continue;
+            }
+            
+            var result = await SearchEntries(new()
+            {
+                ContentTypeId = contentType.Uid
+            }, new(), new());
+
+            entries.AddRange(result.Entries);
+        }
+
+        return new()
+        {
+            EntriesCount = entries.Count
+        };
+    }
+
     [Action("Search entries", Description = "Search for entries based on the provided filters")]
     public async Task<ListEntriesResponse> SearchEntries(
         [ActionParameter] ContentTypeRequest contentType,
@@ -52,7 +84,7 @@ public class EntriesActions : AppInvocable
         var entries = result.Entries
             .Where(x => input.WorkflowStageId is null || x.Workflow?.Uid == input.WorkflowStageId)
             .ToArray();
-        
+
         return new()
         {
             Entries = entries,
