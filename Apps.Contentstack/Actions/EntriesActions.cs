@@ -47,7 +47,7 @@ public class EntriesActions : AppInvocable
 
         foreach (var contentType in contentTypes.Items)
         {
-            if (contentTypesOptional != null && !contentTypesOptional.Contains(contentType.Uid))
+            if (contentTypesOptional != null && contentTypesOptional.Any() && !contentTypesOptional.Contains(contentType.Uid))
             {
                 continue;
             }
