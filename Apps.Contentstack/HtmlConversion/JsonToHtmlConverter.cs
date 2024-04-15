@@ -21,9 +21,11 @@ public static class JsonToHtmlConverter
 
             return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            logger?.LogError.Invoke($"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}; Exception: {ex}", null);
+            logger?.LogError.Invoke(
+                $"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}; Exception: {ex}",
+                null);
             throw new("Conversion to HTML failed.");
         }
     }
@@ -36,8 +38,8 @@ public static class JsonToHtmlConverter
             var property = entry[x.Uid];
 
             if (property is null)
-                return; 
-            
+                return;
+
             switch (x.DataType)
             {
                 case "json":
@@ -80,7 +82,7 @@ public static class JsonToHtmlConverter
     {
         if (property is null)
             return;
-        
+
         var richTextNode = doc.CreateElement(HtmlConstants.Div);
 
         var contentNodes = property.Descendants()
@@ -92,22 +94,23 @@ public static class JsonToHtmlConverter
         body.AppendChild(richTextNode);
     }
 
-    private static void GlobalFieldToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty)
+    private static void GlobalFieldToHtml(HtmlDocument doc, HtmlNode body, JObject? property,
+        EntryProperty entryProperty)
     {
-        if(property is null || entryProperty.Schema is null)
+        if (property is null || entryProperty.Schema is null)
             return;
-        
+
         ParseEntryToHtml(property, new()
         {
             Schema = entryProperty.Schema
         }, doc, body);
     }
-    
+
     private static void LinkToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty)
     {
         if (property is null)
             return;
-        
+
         AppendContent(doc, body, property["title"]!, HtmlConstants.Div);
         AppendContent(doc, body, property["href"]!, HtmlConstants.Div);
     }

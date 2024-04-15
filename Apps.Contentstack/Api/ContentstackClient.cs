@@ -23,6 +23,8 @@ public class ContentstackClient : BlackBirdRestClient
     protected override Exception ConfigureErrorException(RestResponse response)
     {
         var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content!, JsonSettings)!;
-        return new(error.ErrorMessage + $"; {error.Errors}");
+
+        var exceptionMessage = error.Errors is null ? error.ErrorMessage : error.ErrorMessage + $"; {error.Errors}";
+        return new(exceptionMessage);
     }
 }
