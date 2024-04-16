@@ -1,6 +1,5 @@
 using System.Net.Mime;
 using Apps.Contentstack.Api;
-using Apps.Contentstack.DataSourceHandlers;
 using Apps.Contentstack.HtmlConversion;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Entities;
@@ -15,8 +14,6 @@ using Apps.Contentstack.Models.Response.Entry;
 using Apps.Contentstack.Models.Response.Property;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Dictionaries;
-using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
@@ -38,33 +35,34 @@ public class EntriesActions : AppInvocable
     }
 
     [Action("Calculate all entries", Description = "Calculate all entries")]
-    public async Task<CalculateAllEntriesResponse> CalculateAllEntries(
-        [ActionParameter, Display("Content types"), DataSource(typeof(ContentTypeDataHandler))]
-        IEnumerable<string>? contentTypesOptional,
-        [ActionParameter, Display("Workflow stages"), DataSource(typeof(WorkflowStageDataHandler))] IEnumerable<string>? workflowStages)
+    public async Task<CalculateAllEntriesResponse> CalculateAllEntries([ActionParameter] CalculateEntriesRequest request)
     {
         var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes();
         var entries = new List<EntryEntity>();
 
         foreach (var contentType in contentTypes.Items)
         {
-            if (contentTypesOptional != null && contentTypesOptional.Any() && !contentTypesOptional.Contains(contentType.Uid))
+            if (request.ContentTypes != null && request.ContentTypes.Any() &&
+                !request.ContentTypes.Contains(contentType.Uid))
             {
                 continue;
             }
-            
+
             var result = await SearchEntries(new()
             {
                 ContentTypeId = contentType.Uid
             }, new(), new());
 
-            var stages = workflowStages?.ToList();
-            if (stages != null && stages.Count != 0)
+            bool isWorkflowStageFilterProvided = request.WorkflowStages != null && request.WorkflowStages.Any();
+            if (isWorkflowStageFilterProvided)
             {
-                result.Entries = result.Entries.Where(x => stages.Contains(x.Workflow?.Uid!)).ToArray();
+                var entriesFiltered = result.Entries.Where(x => request.WorkflowStages.Contains(x.Workflow?.Uid)).ToArray();
+                entries.AddRange(entriesFiltered);
             }
-
-            entries.AddRange(result.Entries);
+            else
+            {
+                entries.AddRange(result.Entries);
+            }
         }
 
         return new()
