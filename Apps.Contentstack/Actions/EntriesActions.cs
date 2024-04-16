@@ -40,7 +40,8 @@ public class EntriesActions : AppInvocable
     [Action("Calculate all entries", Description = "Calculate all entries")]
     public async Task<CalculateAllEntriesResponse> CalculateAllEntries(
         [ActionParameter, Display("Content types"), DataSource(typeof(ContentTypeDataHandler))]
-        IEnumerable<string>? contentTypesOptional)
+        IEnumerable<string>? contentTypesOptional,
+        [ActionParameter, Display("Workflow stages"), DataSource(typeof(WorkflowStageDataHandler))] IEnumerable<string>? workflowStages)
     {
         var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes();
         var entries = new List<EntryEntity>();
@@ -56,6 +57,12 @@ public class EntriesActions : AppInvocable
             {
                 ContentTypeId = contentType.Uid
             }, new(), new());
+
+            var stages = workflowStages?.ToList();
+            if (stages != null && stages.Count != 0)
+            {
+                result.Entries = result.Entries.Where(x => stages.Contains(x.Workflow?.Uid!)).ToArray();
+            }
 
             entries.AddRange(result.Entries);
         }
