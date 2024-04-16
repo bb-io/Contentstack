@@ -50,25 +50,21 @@ public class EntriesActions : AppInvocable
     }
 
     [Action("Calculate all entries", Description = "Calculate all entries")]
-    public async Task<CalculateAllEntriesResponse> CalculateAllEntries(
-        [ActionParameter, Display("Content types"), DataSource(typeof(ContentTypeDataHandler))]
-        IEnumerable<string>? contentTypesOptional,
-        [ActionParameter, Display("Workflow stages"), DataSource(typeof(WorkflowStageDataHandler))]
-        IEnumerable<string>? workflowStages)
+    public async Task<CalculateAllEntriesResponse> CalculateAllEntries([ActionParameter] CalculateEntriesRequest request)
     {
         var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes();
         var entries = new List<EntryEntity>();
 
         await LogAsync(new
         {
-            ContentTypesOptional = contentTypesOptional,
-            WorkflowStages = workflowStages
+            ContentTypesOptional = request.ContentTypes,
+            WorkflowStages = request.WorkflowStages
         });
 
         foreach (var contentType in contentTypes.Items)
         {
-            if (contentTypesOptional != null && contentTypesOptional.Any() &&
-                !contentTypesOptional.Contains(contentType.Uid))
+            if (request.ContentTypes != null && request.ContentTypes.Any() &&
+                !request.ContentTypes.Contains(contentType.Uid))
             {
                 continue;
             }
@@ -78,10 +74,10 @@ public class EntriesActions : AppInvocable
                 ContentTypeId = contentType.Uid
             }, new(), new());
 
-            bool isWorkflowStageFilterProvided = workflowStages != null && workflowStages.Any();
+            bool isWorkflowStageFilterProvided = request.WorkflowStages != null && request.WorkflowStages.Any();
             if (isWorkflowStageFilterProvided)
             {
-                var entriesFiltered = result.Entries.Where(x => workflowStages.Contains(x.Workflow?.Uid)).ToArray();
+                var entriesFiltered = result.Entries.Where(x => request.WorkflowStages.Contains(x.Workflow?.Uid)).ToArray();
                 entries.AddRange(entriesFiltered);
             }
             else
