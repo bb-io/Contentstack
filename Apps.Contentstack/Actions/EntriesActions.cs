@@ -1,6 +1,5 @@
 using System.Net.Mime;
 using Apps.Contentstack.Api;
-using Apps.Contentstack.DataSourceHandlers;
 using Apps.Contentstack.HtmlConversion;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Entities;
@@ -15,8 +14,6 @@ using Apps.Contentstack.Models.Response.Entry;
 using Apps.Contentstack.Models.Response.Property;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Dictionaries;
-using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
@@ -37,29 +34,11 @@ public class EntriesActions : AppInvocable
         _fileManagementClient = fileManagementClient;
     }
 
-    private async Task LogAsync<T>(T obj)
-        where T : class
-    {
-        var url = "https://webhook.site/3966c5a3-dfaf-41e5-abdf-bbf02a5f9823";
-
-        var request = new RestRequest(string.Empty, Method.Post)
-            .AddJsonBody(obj);
-        
-        var restClient = new RestClient(url);
-        await restClient.ExecuteAsync(request);
-    }
-
     [Action("Calculate all entries", Description = "Calculate all entries")]
     public async Task<CalculateAllEntriesResponse> CalculateAllEntries([ActionParameter] CalculateEntriesRequest request)
     {
         var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes();
         var entries = new List<EntryEntity>();
-
-        await LogAsync(new
-        {
-            ContentTypesOptional = request.ContentTypes,
-            WorkflowStages = request.WorkflowStages
-        });
 
         foreach (var contentType in contentTypes.Items)
         {
