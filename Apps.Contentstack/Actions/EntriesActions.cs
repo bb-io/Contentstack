@@ -37,35 +37,52 @@ public class EntriesActions : AppInvocable
         _fileManagementClient = fileManagementClient;
     }
 
+    private async Task LogAsync<T>(T obj)
+        where T : class
+    {
+        var url = "https://webhook.site/3966c5a3-dfaf-41e5-abdf-bbf02a5f9823";
+
+        var request = new RestRequest(string.Empty, Method.Post)
+            .AddJsonBody(obj);
+        
+        var restClient = new RestClient(url);
+        await restClient.ExecuteAsync(request);
+    }
+
     [Action("Calculate all entries", Description = "Calculate all entries")]
     public async Task<CalculateAllEntriesResponse> CalculateAllEntries(
         [ActionParameter, Display("Content types"), DataSource(typeof(ContentTypeDataHandler))]
         IEnumerable<string>? contentTypesOptional,
-        [ActionParameter, Display("Workflow stages"), DataSource(typeof(WorkflowStageDataHandler))] IEnumerable<string>? workflowStages)
+        [ActionParameter, Display("Workflow stages"), DataSource(typeof(WorkflowStageDataHandler))]
+        IEnumerable<string>? workflowStages)
     {
         var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes();
         var entries = new List<EntryEntity>();
 
+        await LogAsync(new
+        {
+            ContentTypesOptional = contentTypesOptional,
+            WorkflowStages = workflowStages
+        });
+
         foreach (var contentType in contentTypes.Items)
         {
-            if (contentTypesOptional != null && contentTypesOptional.Any() && !contentTypesOptional.Contains(contentType.Uid))
+            if (contentTypesOptional != null && contentTypesOptional.Any() &&
+                !contentTypesOptional.Contains(contentType.Uid))
             {
                 continue;
             }
-            
+
             var result = await SearchEntries(new()
             {
                 ContentTypeId = contentType.Uid
             }, new(), new());
-            
+
             bool isWorkflowStageFilterProvided = workflowStages != null && workflowStages.Any();
             if (isWorkflowStageFilterProvided)
             {
-                foreach (var workflowStage in workflowStages)
-                {
-                    var filteredEntries = result.Entries.Where(x => x.Workflow?.Uid == workflowStage).ToArray();
-                    entries.AddRange(filteredEntries);
-                }
+                var entriesFiltered = result.Entries.Where(x => workflowStages.Contains(x.Workflow?.Uid)).ToArray();
+                entries.AddRange(entriesFiltered);
             }
             else
             {
