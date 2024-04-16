@@ -57,14 +57,20 @@ public class EntriesActions : AppInvocable
             {
                 ContentTypeId = contentType.Uid
             }, new(), new());
-
-            var stages = workflowStages?.ToList();
-            if (stages != null && stages.Count != 0)
+            
+            bool isWorkflowStageFilterProvided = workflowStages != null && workflowStages.Any();
+            if (isWorkflowStageFilterProvided)
             {
-                result.Entries = result.Entries.Where(x => stages.Contains(x.Workflow?.Uid!)).ToArray();
+                foreach (var workflowStage in workflowStages)
+                {
+                    var filteredEntries = result.Entries.Where(x => x.Workflow?.Uid == workflowStage).ToArray();
+                    entries.AddRange(filteredEntries);
+                }
             }
-
-            entries.AddRange(result.Entries);
+            else
+            {
+                entries.AddRange(result.Entries);
+            }
         }
 
         return new()
