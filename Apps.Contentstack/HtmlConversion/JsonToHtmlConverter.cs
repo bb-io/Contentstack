@@ -140,16 +140,6 @@ public static class JsonToHtmlConverter
 
         return (htmlDoc, bodyNode);
     }
-    
-    /*
-     * "comments": {
-            "comment": "This is a Test comments leave a reply text of SEO Translation",
-            "call_to_action": {
-                "title": "This is a Test CTA title text of SEO Translation",
-                "href": ""
-            }
-        }
-     */
 
     private static void CommentsToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty)
     {
