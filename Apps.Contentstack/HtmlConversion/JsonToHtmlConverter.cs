@@ -54,6 +54,9 @@ public static class JsonToHtmlConverter
                 case "link":
                     LinkToHtml(doc, body, property as JObject, x);
                     break;
+                case "group" when x.Uid == "comments":
+                    CommentsToHtml(doc, body, property as JObject, x);
+                    break;
             }
 
             if (property?.Type != JTokenType.String)
@@ -136,5 +139,24 @@ public static class JsonToHtmlConverter
         htmlNode.AppendChild(bodyNode);
 
         return (htmlDoc, bodyNode);
+    }
+    
+    /*
+     * "comments": {
+            "comment": "This is a Test comments leave a reply text of SEO Translation",
+            "call_to_action": {
+                "title": "This is a Test CTA title text of SEO Translation",
+                "href": ""
+            }
+        }
+     */
+
+    private static void CommentsToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty)
+    {
+        if(property is null)
+            return;
+        
+        AppendContent(doc, body, property["comment"]!, HtmlConstants.Div);
+        LinkToHtml(doc, body, property["call_to_action"] as JObject, entryProperty);
     }
 }
