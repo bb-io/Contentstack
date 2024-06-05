@@ -28,15 +28,36 @@ Contentstack is a headless CMS technology assembled from a series of best-of-bre
 - **Download/Upload asset** downloads or uploads content for the asset.
 
 ### Content types
+
 - **List content types**
 
 ### Entries
+
 - **Get entry** returns details of the specific entry.
 - **Get entry string/number/date/boolean property** gets data of the specified entry's property.
 - **Set entry string/number/date/boolean property** sets data to the specified entry's property.
 - **Search entries** returns a list of entries based on provided filter criterias.
 - **Get entry content as HTML** returns entry content converted to an HTML file.
 - **Update entry content from HTML** updates entry content from HTML file.
+
+## HTML features
+
+We add metadata to the HTML file to include `Entry ID` and `Content Type ID`. This metadata is used to update the entry content from the HTML file. These tags are used to identify the content in the `Contentstack`, eliminating the need to store IDs elsewhere.
+
+Here is an example of how we include metadata in the HTML file:
+
+```html
+<html>
+    <head>
+        <meta name="blackbird-content-type-id" content="your-content-type">
+        <meta name="blackbird-entry-id" content="your-entry-id">
+    </head>
+    <body>
+        <div path="title">Example HTML page</div>
+        <div path="description">Blackbird is the new automation backbone for the language technology industry.</div>
+    </body>
+</html>
+```
 
 ## Events
 
