@@ -6,8 +6,11 @@ using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.HtmlConversion;
 
-public class HtmlToJsonConverter
+public static class HtmlToJsonConverter
 {
+    private const string ContentTypeMetaTag = "blackbird-content-type-id";
+    private const string EntryMetaTag = "blackbird-entry-id";
+
     public static void UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger)
     {
         var doc = new HtmlDocument();
@@ -32,5 +35,16 @@ public class HtmlToJsonConverter
             logger?.LogError.Invoke($"Conversion to Contentstack JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}; Exception: {ex}", null);
             throw new("The HTML file structure should match the source article");
         }
+    }
+
+    public static (string? ContentTypeId, string? EntryId) ExtractContentTypeAndEntryId(Stream file)
+    {
+        var doc = new HtmlDocument();
+        doc.Load(file);
+
+        var contentTypeId = doc.DocumentNode.SelectSingleNode($"//meta[@name='{ContentTypeMetaTag}']")?.GetAttributeValue("content", null);
+        var entryId = doc.DocumentNode.SelectSingleNode($"//meta[@name='{EntryMetaTag}']")?.GetAttributeValue("content", null);
+
+        return (contentTypeId, entryId);
     }
 }

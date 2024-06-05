@@ -239,7 +239,7 @@ public class EntriesActions : AppInvocable
         var contentType = await GetContentType(input.ContentTypeId);
 
         var entry = await GetEntryJObject(input.ContentTypeId, input.EntryId, locale.Locale);
-        var html = JsonToHtmlConverter.ToHtml(entry, contentType, InvocationContext.Logger);
+        var html = JsonToHtmlConverter.ToHtml(entry, contentType, InvocationContext.Logger, input.ContentTypeId, input.EntryId);
 
         var file = await _fileManagementClient.UploadAsync(new MemoryStream(html), MediaTypeNames.Text.Html,
             $"{input.EntryId}.html");
@@ -249,15 +249,19 @@ public class EntriesActions : AppInvocable
 
     [Action("Update entry content from HTML", Description = "Update content of a specific entry from HTML file")]
     public async Task UpdateEntryFromHtml(
-        [ActionParameter] EntryRequest input,
+        [ActionParameter] EntryOptionalRequest input,
         [ActionParameter] FileRequest fileRequest,
         [ActionParameter] LocaleRequest locale)
     {
         var file = await _fileManagementClient.DownloadAsync(fileRequest.File);
-        var entry = await GetEntryJObject(input.ContentTypeId, input.EntryId);
+        var (extractedContentTypeId, extractedEntryId) = HtmlToJsonConverter.ExtractContentTypeAndEntryId(file);
 
+        var contentTypeId = input.ContentTypeId ?? extractedContentTypeId ?? throw new("Content type ID is missing. Please provide it as an input or in the HTML file meta tag");
+        var entryId = input.EntryId ?? extractedEntryId ?? throw new("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
+
+        var entry = await GetEntryJObject(contentTypeId, entryId);
         HtmlToJsonConverter.UpdateEntryFromHtml(file, entry, InvocationContext.Logger);
-        await UpdateEntry(input.ContentTypeId, input.EntryId, entry, locale.Locale);
+        await UpdateEntry(contentTypeId, entryId, entry, locale.Locale);
     }
 
     #endregion

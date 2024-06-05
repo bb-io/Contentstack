@@ -11,11 +11,11 @@ namespace Apps.Contentstack.HtmlConversion;
 
 public static class JsonToHtmlConverter
 {
-    public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType, Logger? logger)
+    public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType, Logger? logger, string contentTypeId, string entryId)
     {
         try
         {
-            var (doc, body) = PrepareEmptyHtmlDocument();
+            var (doc, body) = PrepareEmptyHtmlDocument(contentTypeId, entryId);
 
             ParseEntryToHtml(entry, contentType, doc, body);
 
@@ -118,7 +118,6 @@ public static class JsonToHtmlConverter
         AppendContent(doc, body, property["href"]!, HtmlConstants.Div);
     }
 
-
     private static void AppendContent(HtmlDocument doc, HtmlNode parentNode, JToken property, string htmlTag)
     {
         var contentNode = doc.CreateElement(htmlTag);
@@ -128,12 +127,24 @@ public static class JsonToHtmlConverter
         parentNode.AppendChild(contentNode);
     }
 
-    private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument()
+    private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string contentTypeId, string entryId)
     {
         var htmlDoc = new HtmlDocument();
         var htmlNode = htmlDoc.CreateElement(HtmlConstants.Html);
         htmlDoc.DocumentNode.AppendChild(htmlNode);
-        htmlNode.AppendChild(htmlDoc.CreateElement(HtmlConstants.Head));
+        
+        var headNode = htmlDoc.CreateElement(HtmlConstants.Head);
+        htmlNode.AppendChild(headNode);
+
+        var metaContentTypeNode = htmlDoc.CreateElement("meta");
+        metaContentTypeNode.SetAttributeValue("name", "blackbird-content-type-id");
+        metaContentTypeNode.SetAttributeValue("content", contentTypeId);
+        headNode.AppendChild(metaContentTypeNode);
+
+        var metaEntryNode = htmlDoc.CreateElement("meta");
+        metaEntryNode.SetAttributeValue("name", "blackbird-entry-id");
+        metaEntryNode.SetAttributeValue("content", entryId);
+        headNode.AppendChild(metaEntryNode);
 
         var bodyNode = htmlDoc.CreateElement(HtmlConstants.Body);
         htmlNode.AppendChild(bodyNode);
