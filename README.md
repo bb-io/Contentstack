@@ -40,6 +40,18 @@ Contentstack is a headless CMS technology assembled from a series of best-of-bre
 - **Get entry content as HTML** returns entry content converted to an HTML file.
 - **Update entry content from HTML** updates entry content from HTML file.
 
+## Events
+
+-   **On asset deleted**
+-   **On asset published**
+-   **On asset unpublished**
+-   **On entry created**
+-   **On entry deleted**
+-   **On entry published**
+-   **On entry unpublished**
+-   **On entry updated**
+
+
 ## HTML features
 
 We add metadata to the HTML file to include `Entry ID` and `Content Type ID`. This metadata is used to update the entry content from the HTML file. These tags are used to identify the content in the `Contentstack`, eliminating the need to store IDs elsewhere.
@@ -58,17 +70,6 @@ Here is an example of how we include metadata in the HTML file:
     </body>
 </html>
 ```
-
-## Events
-
--   **On asset deleted**
--   **On asset published**
--   **On asset unpublished**
--   **On entry created**
--   **On entry deleted**
--   **On entry published**
--   **On entry unpublished**
--   **On entry updated**
 
 ## Feedback
 
