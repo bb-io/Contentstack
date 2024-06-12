@@ -248,7 +248,7 @@ public class EntriesActions : AppInvocable
     }
 
     [Action("Update entry content from HTML", Description = "Update content of a specific entry from HTML file")]
-    public async Task UpdateEntryFromHtml(
+    public async Task<UpdateEntryFromHtmlResponse> UpdateEntryFromHtml(
         [ActionParameter] EntryOptionalRequest input,
         [ActionParameter] FileRequest fileRequest,
         [ActionParameter] LocaleRequest locale)
@@ -262,6 +262,12 @@ public class EntriesActions : AppInvocable
         var entry = await GetEntryJObject(contentTypeId, entryId);
         HtmlToJsonConverter.UpdateEntryFromHtml(file, entry, InvocationContext.Logger);
         await UpdateEntry(contentTypeId, entryId, entry, locale.Locale);
+        
+        return new()
+        {
+            ContentTypeId = contentTypeId,
+            EntryId = entryId
+        };
     }
 
     #endregion
