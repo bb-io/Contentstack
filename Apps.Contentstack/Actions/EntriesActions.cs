@@ -254,13 +254,17 @@ public class EntriesActions : AppInvocable
         [ActionParameter] LocaleRequest locale)
     {
         var file = await _fileManagementClient.DownloadAsync(fileRequest.File);
-        var (extractedContentTypeId, extractedEntryId) = HtmlToJsonConverter.ExtractContentTypeAndEntryId(file);
+        var memoryStream = new MemoryStream();
+        await file.CopyToAsync(memoryStream);
+        memoryStream.Position = 0;
+        
+        var (extractedContentTypeId, extractedEntryId) = HtmlToJsonConverter.ExtractContentTypeAndEntryId(memoryStream);
 
         var contentTypeId = input.ContentTypeId ?? extractedContentTypeId ?? throw new("Content type ID is missing. Please provide it as an input or in the HTML file meta tag");
         var entryId = input.EntryId ?? extractedEntryId ?? throw new("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
         var entry = await GetEntryJObject(contentTypeId, entryId);
-        HtmlToJsonConverter.UpdateEntryFromHtml(file, entry, InvocationContext.Logger);
+        HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
         await UpdateEntry(contentTypeId, entryId, entry, locale.Locale);
         
         return new()
