@@ -44,7 +44,8 @@ public static class HtmlToJsonConverter
 
         var contentTypeId = doc.DocumentNode.SelectSingleNode($"//meta[@name='{ContentTypeMetaTag}']")?.GetAttributeValue("content", null);
         var entryId = doc.DocumentNode.SelectSingleNode($"//meta[@name='{EntryMetaTag}']")?.GetAttributeValue("content", null);
-
+        
+        file.Position = 0;
         return (contentTypeId, entryId);
     }
 }
