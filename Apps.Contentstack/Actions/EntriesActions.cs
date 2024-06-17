@@ -265,6 +265,7 @@ public class EntriesActions : AppInvocable
 
         var entry = await GetEntryJObject(contentTypeId, entryId);
         HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
+        await UpdateEntry(contentTypeId, entryId, entry, locale.Locale);
         
         return new()
         {
