@@ -273,6 +273,23 @@ public class EntriesActions : AppInvocable
             EntryId = entryId
         };
     }
+    
+    [Action("Get IDs from HTML", Description = "Extract content type and entry IDs from HTML file")]
+    public GetIdsFromHtmlResponse ExtractContentTypeAndEntryId(
+        [ActionParameter] FileRequest fileRequest)
+    {
+        var file = _fileManagementClient.DownloadAsync(fileRequest.File).Result;
+        var memoryStream = new MemoryStream();
+        file.CopyTo(memoryStream);
+        memoryStream.Position = 0;
+        
+        var (contentTypeId, entryId) = HtmlToJsonConverter.ExtractContentTypeAndEntryId(memoryStream);
+        return new()
+        {
+            ContentTypeId = contentTypeId,
+            EntryId = entryId
+        };
+    }
 
     #endregion
 
