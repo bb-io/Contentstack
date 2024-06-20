@@ -39,6 +39,7 @@ Contentstack is a headless CMS technology assembled from a series of best-of-bre
 - **Search entries** returns a list of entries based on provided filter criterias.
 - **Get entry content as HTML** returns entry content converted to an HTML file.
 - **Update entry content from HTML** updates entry content from HTML file.
+- **Get IDs from HTML** extracts content type and entry IDs from HTML file
 
 ## Events
 
