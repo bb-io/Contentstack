@@ -18,6 +18,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using Blackbird.Applications.Sdk.Utils.Extensions.String;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
 
@@ -98,9 +99,10 @@ public class EntriesActions : AppInvocable
     }
 
     [Action("Get entry", Description = "Get details of a specific entry")]
-    public async Task<EntryEntity> GetEntry(
+    public async Task<SingleEntryEntity> GetEntry(
         [ActionParameter] EntryRequest input,
-        [ActionParameter] LocaleRequest locale)
+        [ActionParameter] LocaleRequest locale,
+        [ActionParameter] FileExtensionRequest fileExtension)
     {
         var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.EntryId}"
             .SetQueryParameter("include_workflow", "true");
@@ -109,11 +111,15 @@ public class EntriesActions : AppInvocable
             endpoint = endpoint.SetQueryParameter("locale", locale.Locale);
 
         var request = new ContentstackRequest(endpoint, Method.Get, Creds);
-        var response = await Client.ExecuteWithErrorHandling<EntryResponse>(request);
-
-        return response.Entry;
+        var response = await Client.ExecuteWithErrorHandling(request);
+        var jObject = (JObject)JsonConvert.DeserializeObject(response.Content!)!;
+        var entryJObject = jObject["entry"] as JObject;
+        var assetIds = ExtractAssetIdsFromJObject(entryJObject, fileExtension.FileExtension);
+        
+        var entry = JsonConvert.DeserializeObject<EntryResponse>(response.Content!)!;
+        return new SingleEntryEntity(entry.Entry, assetIds);
     }
-
+    
     [Action("Set entry workflow stage", Description = "Set different workflow stage for a specific entry")]
     public Task SetEntryWorkflowStage(
         [ActionParameter] EntryRequest entry,
@@ -294,6 +300,29 @@ public class EntriesActions : AppInvocable
     #endregion
 
     #region Utils
+    
+    private List<string> ExtractAssetIdsFromJObject(JObject entryJObject, string? fileExtension)
+    {
+        var assetIds = new List<string>();
+        foreach (var property in entryJObject.Properties())
+        {
+            if (property.Value.Type == JTokenType.Object)
+            {
+                var potentialAsset = property.Value as JObject;
+                var uid = potentialAsset?["uid"]?.ToString();
+                var fileName = potentialAsset?["filename"]?.ToString();
+                if (!string.IsNullOrEmpty(uid) && !string.IsNullOrEmpty(fileName))
+                {
+                    if (string.IsNullOrEmpty(fileExtension) || fileName.EndsWith(fileExtension))
+                    {
+                        assetIds.Add(uid);
+                    }
+                }
+            }
+        }
+
+        return assetIds;
+    }
 
     private async Task SetEntryProperty<T>(string contentTypeId, string entryId, string property, T value,
         string? locale = default)
