@@ -4,6 +4,6 @@ namespace Apps.Contentstack.Models.Request;
 
 public class FileExtensionRequest
 {
-    [Display("File extension", Description = "The file extension to filter by. Example: '.jpg', '.png' or '.json'")]
+    [Display("(Asset) File extension", Description = "The file extension to filter assets. Example: '.jpg', '.png' or '.json'")]
     public string? FileExtension { get; set; }
 }
