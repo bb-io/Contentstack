@@ -11,12 +11,12 @@ namespace Apps.Contentstack.HtmlConversion;
 
 public static class JsonToHtmlConverter
 {
-    public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType, Logger? logger, string contentTypeId, string entryId)
+    public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType, Logger? logger, string contentTypeId,
+        string entryId)
     {
         try
         {
             var (doc, body) = PrepareEmptyHtmlDocument(contentTypeId, entryId);
-
             ParseEntryToHtml(entry, contentType, doc, body);
 
             return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
@@ -40,29 +40,30 @@ public static class JsonToHtmlConverter
             if (property is null)
                 return;
 
+            var max = x.ContentTypeSchema?["max"]?.Value<int>();
             switch (x.DataType)
             {
                 case "json":
-                    JsonRichTextToHtml(doc, body, (property as JObject)!);
+                    JsonRichTextToHtml(doc, body, (property as JObject)!, max);
                     break;
                 case "blocks":
                     BlocksToHtml(doc, body, (property as JArray)!, x);
                     break;
                 case "global_field":
-                    GlobalFieldToHtml(doc, body, (property as JObject)!, x);
+                    GlobalFieldToHtml(doc, body, (property as JObject)!, x, max);
                     break;
                 case "link":
-                    LinkToHtml(doc, body, property as JObject, x);
+                    LinkToHtml(doc, body, property as JObject, x, max);
                     break;
                 case "group" when x.Uid == "comments":
-                    CommentsToHtml(doc, body, property as JObject, x);
+                    CommentsToHtml(doc, body, property as JObject, x, max);
                     break;
             }
 
             if (property?.Type != JTokenType.String)
                 return;
 
-            AppendContent(doc, body, property, HtmlConstants.Div);
+            AppendContent(doc, body, property, HtmlConstants.Div, max);
         });
     }
 
@@ -81,7 +82,7 @@ public static class JsonToHtmlConverter
         });
     }
 
-    private static void JsonRichTextToHtml(HtmlDocument doc, HtmlNode body, JObject? property)
+    private static void JsonRichTextToHtml(HtmlDocument doc, HtmlNode body, JObject? property, int? max = null)
     {
         if (property is null)
             return;
@@ -93,12 +94,11 @@ public static class JsonToHtmlConverter
             .OfType<JProperty>()
             .ToList();
 
-        contentNodes.ForEach(x => AppendContent(doc, richTextNode, x, HtmlConstants.Span));
+        contentNodes.ForEach(x => AppendContent(doc, richTextNode, x, HtmlConstants.Span, max));
         body.AppendChild(richTextNode);
     }
 
-    private static void GlobalFieldToHtml(HtmlDocument doc, HtmlNode body, JObject? property,
-        EntryProperty entryProperty)
+    private static void GlobalFieldToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty, int? max = null)
     {
         if (property is null || entryProperty.Schema is null)
             return;
@@ -109,30 +109,38 @@ public static class JsonToHtmlConverter
         }, doc, body);
     }
 
-    private static void LinkToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty)
+    private static void LinkToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty, int? max = null)
     {
         if (property is null)
             return;
 
-        AppendContent(doc, body, property["title"]!, HtmlConstants.Div);
-        AppendContent(doc, body, property["href"]!, HtmlConstants.Div);
+        AppendContent(doc, body, property["title"]!, HtmlConstants.Div, max);
+        AppendContent(doc, body, property["href"]!, HtmlConstants.Div, max);
     }
 
-    private static void AppendContent(HtmlDocument doc, HtmlNode parentNode, JToken property, string htmlTag)
+    private static void AppendContent(HtmlDocument doc, HtmlNode parentNode, JToken property, string htmlTag,
+        int? max = null)
     {
         var contentNode = doc.CreateElement(htmlTag);
         contentNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
+
+        if (max.HasValue)
+        {
+            contentNode.SetAttributeValue("max", max.Value.ToString());
+        }
 
         contentNode.InnerHtml = property is JProperty jProperty ? jProperty.Value.ToString() : property.ToString();
         parentNode.AppendChild(contentNode);
     }
 
-    private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string contentTypeId, string entryId)
+
+    private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string contentTypeId,
+        string entryId)
     {
         var htmlDoc = new HtmlDocument();
         var htmlNode = htmlDoc.CreateElement(HtmlConstants.Html);
         htmlDoc.DocumentNode.AppendChild(htmlNode);
-        
+
         var headNode = htmlDoc.CreateElement(HtmlConstants.Head);
         htmlNode.AppendChild(headNode);
 
@@ -152,12 +160,12 @@ public static class JsonToHtmlConverter
         return (htmlDoc, bodyNode);
     }
 
-    private static void CommentsToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty)
+    private static void CommentsToHtml(HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty, int? max = null)
     {
         if(property is null)
             return;
-        
-        AppendContent(doc, body, property["comment"]!, HtmlConstants.Div);
-        LinkToHtml(doc, body, property["call_to_action"] as JObject, entryProperty);
+    
+        AppendContent(doc, body, property["comment"]!, HtmlConstants.Div, max);
+        LinkToHtml(doc, body, property["call_to_action"] as JObject, entryProperty, max);
     }
 }

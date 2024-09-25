@@ -17,4 +17,6 @@ public class EntryProperty
     public List<ContentTypeBlockEntity>? Blocks { get; set; }
     
     public JArray? Schema { get; set; }
+
+    public JObject? ContentTypeSchema { get; set; } = new();
 }
