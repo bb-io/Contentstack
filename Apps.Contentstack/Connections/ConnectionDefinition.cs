@@ -12,10 +12,18 @@ public class ConnectionDefinition : IConnectionDefinition
         {
             Name = "Developer API key",
             AuthenticationType = ConnectionAuthenticationType.Undefined,
-            ConnectionUsage = ConnectionUsage.Actions,
             ConnectionProperties = new List<ConnectionProperty>
             {
-                new(CredsNames.Host) { DisplayName = "Host" },
+                new(CredsNames.Host) { 
+                    DisplayName = "Host region",
+                    DataItems =
+                    [
+                        new ("https://api.contentstack.io", "US (North America, or NA)"),
+                        new ("https://eu-api.contentstack.com", "Europe (EU)"),
+                        new ("https://azure-na-api.contentstack.com", "Azure North America (Azure NA)"),
+                        new ("https://azure-eu-api.contentstack.com", "Azure Europe (Azure EU)")
+                    ] 
+                },
                 new(CredsNames.StackApiKey) { DisplayName = "Stack API key", Sensitive = true },
                 new(CredsNames.ManagementToken) { DisplayName = "Management token", Sensitive = true }
             }
@@ -25,6 +33,6 @@ public class ConnectionDefinition : IConnectionDefinition
     public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(
         Dictionary<string, string> values) =>
         values.Select(x =>
-                new AuthenticationCredentialsProvider(AuthenticationCredentialsRequestLocation.None, x.Key, x.Value))
+                new AuthenticationCredentialsProvider(x.Key, x.Value))
             .ToList();
 }

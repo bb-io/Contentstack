@@ -10,7 +10,7 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers.Properties.Base;
 
-public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceHandler
+public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceItemHandler
 {
     private string ContentTypeId { get; }
 
@@ -26,7 +26,7 @@ public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceHandl
     }
 
 
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(ContentTypeId))
@@ -50,6 +50,6 @@ public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceHandl
             .Where(x => context.SearchString is null ||
                         x.DisplayName.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .DistinctBy(x => x.Uid)
-            .ToDictionary(x => x.Uid, x => x.DisplayName);
+            .Select(x => new DataSourceItem(x.Uid, x.DisplayName));
     }
 }

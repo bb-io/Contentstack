@@ -10,12 +10,6 @@ public class Application : IApplication, ICategoryProvider
         get => [ApplicationCategory.Cms];
         set { }
     }
-    
-    public string Name
-    {
-        get => "Contentstack";
-        set { }
-    }
 
     public T GetInstance<T>()
     {

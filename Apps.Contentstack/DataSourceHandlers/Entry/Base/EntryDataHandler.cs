@@ -7,7 +7,7 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers.Entry.Base;
 
-public class EntryDataHandler : AppInvocable, IAsyncDataSourceHandler
+public class EntryDataHandler : AppInvocable, IAsyncDataSourceItemHandler
 {
     private string ContentTypeId { get; }
 
@@ -17,21 +17,19 @@ public class EntryDataHandler : AppInvocable, IAsyncDataSourceHandler
         ContentTypeId = contentTypeId;
     }
 
-
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
-        CancellationToken cancellationToken)
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(ContentTypeId))
             throw new("You have to input Content type first");
-        
+
         var request = new ContentstackRequest($"v3/content_types/{ContentTypeId}/entries", Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);
-        
+
         return response.Entries
             .Where(x => context.SearchString is null ||
                         x.Title.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.CreatedAt)
             .Take(50)
-            .ToDictionary(x => x.Uid, x => x.Title);
+            .Select(x => new DataSourceItem(x.Uid, x.Title) );
     }
 }

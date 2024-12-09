@@ -4,7 +4,7 @@ namespace Apps.Contentstack.Webhooks.Models.Payloads;
 
 public class AssetPayload
 {
-    [Display("UID")]
+    [Display("Asset ID")]
     public string Uid { get; set; }
     
     [Display("File name")]
