@@ -8,18 +8,24 @@ Blackbird is the new automation backbone for the language technology industry. B
 
 Contentstack is a headless CMS technology assembled from a series of best-of-breed solutions. This Contentstack application primarily centers around entry and asset management.
 
+## Before setting up
+
+Before you can connect you need to make sure that:
+
+- You have a Contentstack _Stack API key_: Go to your Contentstack _Stack settings_ and copy API key from the _API Credentials_ section
+- You have a Contentstack _Management token_: On the settings page go to _Tokens_, select _Management Tokens_ section and generate API management token with the parameters you need.
+
 ## Connecting
 
-1. Navigate to apps and search for Contentstack. If you cannot find Contentstack then click _Add App_ in the top right corner, select Contentstack and add the app to your Blackbird environment.
+1. Navigate to apps and search for Contentstack.
 2. Click _Add Connection_.
-3. Name your connection for future reference e.g. 'My client'.
-4. In the _Host_ field input one of the following values: api.contentstack.io, eu-api.contentstack.com, azure-na-api.contentstack.com, azure-eu-api.contentstack.com
-5. Go to your Contentstack _Stack settings_ and copy API key from the _API Credentials_ section
-6. Paste it to the _Stack API key_ field in Blackbird
-7. On the settings page go to _Tokens_, select _Management Tokens_ section and generate API management token with the parameters you need.
-8. Copy it to the _Management token_ field in Blackbird
-9. Click _Connect_.
-10. Confirm that the connection has appeared and the status is _Connected_.
+3. Name your connection for future reference e.g. 'My contentstack connection'.
+4. In the _Host region_ field, select your Contentstack region.
+5. Fill in the _Stack API key_ and  _Management token_
+6. Click _Connect_.
+7. Confirm that the connection has appeared and the status is _Connected_.
+
+![1733749434672](image/README/1733749434672.png)
 
 ## Actions
 
