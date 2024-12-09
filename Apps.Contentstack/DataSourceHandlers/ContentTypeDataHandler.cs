@@ -7,13 +7,13 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers;
 
-public class ContentTypeDataHandler : AppInvocable, IAsyncDataSourceHandler
+public class ContentTypeDataHandler : AppInvocable, IAsyncDataSourceItemHandler
 {
     public ContentTypeDataHandler(InvocationContext invocationContext) : base(invocationContext)
     {
     }
 
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
         var request = new ContentstackRequest("v3/content_types", Method.Get, Creds);
@@ -24,6 +24,6 @@ public class ContentTypeDataHandler : AppInvocable, IAsyncDataSourceHandler
                         x.Title.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.CreatedAt)
             .Take(50)
-            .ToDictionary(x => x.Uid, x => x.Title);
+            .Select(x => new DataSourceItem(x.Uid, x.Title));
     }
 }

@@ -5,7 +5,7 @@ namespace Apps.Contentstack.Models.Entities;
 
 public class EntryEntity
 {
-    [Display("Entry UID")]
+    [Display("Entry ID")]
     public string Uid { get; set; }
     
     public string Title { get; set; }

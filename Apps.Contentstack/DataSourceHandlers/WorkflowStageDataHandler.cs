@@ -7,13 +7,13 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers;
 
-public class WorkflowStageDataHandler : AppInvocable, IAsyncDataSourceHandler
+public class WorkflowStageDataHandler : AppInvocable, IAsyncDataSourceItemHandler
 {
     public WorkflowStageDataHandler(InvocationContext invocationContext) : base(invocationContext)
     {
     }
 
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
         var request = new ContentstackRequest("v3/workflows/", Method.Get, Creds);
@@ -36,6 +36,6 @@ public class WorkflowStageDataHandler : AppInvocable, IAsyncDataSourceHandler
             }
         }
         
-        return dictionary;
+        return dictionary.Select(x => new DataSourceItem(x.Key, x.Value));
     }
 }

@@ -4,7 +4,7 @@ namespace Apps.Contentstack.Models.Entities;
 
 public class ContentTypeEntity
 {
-    [Display("Content type UID")]
+    [Display("Content type ID")]
     public string Uid { get; set; }
     
     public string Title { get; set; }
