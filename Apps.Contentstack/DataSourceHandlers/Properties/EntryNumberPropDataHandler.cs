@@ -5,13 +5,10 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentstack.DataSourceHandlers.Properties;
 
-public class EntryNumberPropDataHandler : EntryPropDataHandler
+public class EntryNumberPropDataHandler(
+    InvocationContext invocationContext,
+    [ActionParameter] EntryNumberPropRequest request)
+    : EntryPropDataHandler(invocationContext, request.EntryId, request.ContentTypeId)
 {
     protected override string DataType => "number";
-
-
-    public EntryNumberPropDataHandler(InvocationContext invocationContext,
-        [ActionParameter] EntryNumberPropRequest request) : base(invocationContext, request.EntryId, request.ContentTypeId)
-    {
-    }
 }

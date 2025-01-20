@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Mime;
 using Apps.Contentstack.Api;
 using Apps.Contentstack.HtmlConversion;
@@ -14,6 +15,7 @@ using Apps.Contentstack.Models.Response.Entry;
 using Apps.Contentstack.Models.Response.Property;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
@@ -25,18 +27,12 @@ using RestSharp;
 namespace Apps.Contentstack.Actions;
 
 [ActionList]
-public class EntriesActions : AppInvocable
+public class EntriesActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
+    : AppInvocable(invocationContext)
 {
-    private readonly IFileManagementClient _fileManagementClient;
-
-    public EntriesActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(
-        invocationContext)
-    {
-        _fileManagementClient = fileManagementClient;
-    }
-
     [Action("Calculate all entries", Description = "Calculate all entries")]
-    public async Task<CalculateAllEntriesResponse> CalculateAllEntries([ActionParameter] CalculateEntriesRequest request)
+    public async Task<CalculateAllEntriesResponse> CalculateAllEntries(
+        [ActionParameter] CalculateEntriesRequest request)
     {
         var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes();
         var entries = new List<EntryEntity>();
@@ -57,7 +53,8 @@ public class EntriesActions : AppInvocable
             bool isWorkflowStageFilterProvided = request.WorkflowStages != null && request.WorkflowStages.Any();
             if (isWorkflowStageFilterProvided)
             {
-                var entriesFiltered = result.Entries.Where(x => request.WorkflowStages.Contains(x.Workflow?.Uid)).ToArray();
+                var entriesFiltered = result.Entries.Where(x => request.WorkflowStages.Contains(x.Workflow?.Uid))
+                    .ToArray();
                 entries.AddRange(entriesFiltered);
             }
             else
@@ -115,11 +112,46 @@ public class EntriesActions : AppInvocable
         var jObject = (JObject)JsonConvert.DeserializeObject(response.Content!)!;
         var entryJObject = jObject["entry"] as JObject;
         var assetIds = ExtractAssetIdsFromJObject(entryJObject, fileExtension.FileExtension);
-        
+
         var entry = JsonConvert.DeserializeObject<EntryResponse>(response.Content!)!;
         return new SingleEntryEntity(entry.Entry, assetIds);
     }
-    
+
+    [Action("Publish entry", Description = "Publish a specific entry based on ID")]
+    public async Task<NoticeResponse> PublishEntry(
+        [ActionParameter] EntryRequest input,
+        [ActionParameter] PublishEntryRequest publishEntryRequest)
+    {
+        var entryEntity = await GetEntry(input, new() { Locale = publishEntryRequest.Locale }, new());
+
+        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.EntryId}/publish"
+            .SetQueryParameter("publish_all_localized", "true");
+
+        var dictionaryBody = new Dictionary<string, object>
+        {
+            {
+                "entry", new
+                {
+                    environments = new[] { publishEntryRequest.Environment },
+                    locales = new[] { publishEntryRequest.Locale }
+                }
+            },
+            { "locale", publishEntryRequest.Locale },
+            { "version", entryEntity.Version }
+        };
+
+        if (publishEntryRequest.ScheduledAt.HasValue)
+        {
+            dictionaryBody.Add("scheduled_at",
+                publishEntryRequest.ScheduledAt.Value.ToString("o", CultureInfo.InvariantCulture));
+        }
+
+        var request = new ContentstackRequest(endpoint, Method.Post, Creds)
+            .WithJsonBody(dictionaryBody);
+
+        return await Client.ExecuteWithErrorHandling<NoticeResponse>(request);
+    }
+
     [Action("Set entry workflow stage", Description = "Set different workflow stage for a specific entry")]
     public Task SetEntryWorkflowStage(
         [ActionParameter] EntryRequest entry,
@@ -245,9 +277,10 @@ public class EntriesActions : AppInvocable
         var contentType = await GetContentType(input.ContentTypeId);
 
         var entry = await GetEntryJObject(input.ContentTypeId, input.EntryId, locale.Locale);
-        var html = JsonToHtmlConverter.ToHtml(entry, contentType, InvocationContext.Logger, input.ContentTypeId, input.EntryId);
+        var html = JsonToHtmlConverter.ToHtml(entry, contentType, InvocationContext.Logger, input.ContentTypeId,
+            input.EntryId);
 
-        var file = await _fileManagementClient.UploadAsync(new MemoryStream(html), MediaTypeNames.Text.Html,
+        var file = await fileManagementClient.UploadAsync(new MemoryStream(html), MediaTypeNames.Text.Html,
             $"{input.EntryId}.html");
 
         return new(file);
@@ -259,36 +292,39 @@ public class EntriesActions : AppInvocable
         [ActionParameter] FileRequest fileRequest,
         [ActionParameter] LocaleRequest locale)
     {
-        var file = await _fileManagementClient.DownloadAsync(fileRequest.File);
+        var file = await fileManagementClient.DownloadAsync(fileRequest.File);
         var memoryStream = new MemoryStream();
         await file.CopyToAsync(memoryStream);
         memoryStream.Position = 0;
-        
+
         var (extractedContentTypeId, extractedEntryId) = HtmlToJsonConverter.ExtractContentTypeAndEntryId(memoryStream);
 
-        var contentTypeId = input.ContentTypeId ?? extractedContentTypeId ?? throw new("Content type ID is missing. Please provide it as an input or in the HTML file meta tag");
-        var entryId = input.EntryId ?? extractedEntryId ?? throw new("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
+        var contentTypeId = input.ContentTypeId ?? extractedContentTypeId ??
+            throw new("Content type ID is missing. Please provide it as an input or in the HTML file meta tag");
+        var entryId = input.EntryId ?? extractedEntryId ??
+            throw new("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
         var entry = await GetEntryJObject(contentTypeId, entryId);
         HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
+
         await UpdateEntry(contentTypeId, entryId, entry, locale.Locale);
-        
+
         return new()
         {
             ContentTypeId = contentTypeId,
             EntryId = entryId
         };
     }
-    
+
     [Action("Get IDs from HTML", Description = "Extract content type and entry IDs from HTML file")]
     public GetIdsFromHtmlResponse ExtractContentTypeAndEntryId(
         [ActionParameter] FileRequest fileRequest)
     {
-        var file = _fileManagementClient.DownloadAsync(fileRequest.File).Result;
+        var file = fileManagementClient.DownloadAsync(fileRequest.File).Result;
         var memoryStream = new MemoryStream();
         file.CopyTo(memoryStream);
         memoryStream.Position = 0;
-        
+
         var (contentTypeId, entryId) = HtmlToJsonConverter.ExtractContentTypeAndEntryId(memoryStream);
         return new()
         {
@@ -300,7 +336,7 @@ public class EntriesActions : AppInvocable
     #endregion
 
     #region Utils
-    
+
     private List<string> ExtractAssetIdsFromJObject(JObject entryJObject, string? fileExtension)
     {
         var assetIds = new List<string>();
@@ -350,7 +386,9 @@ public class EntriesActions : AppInvocable
 
         var endpoint = $"v3/content_types/{contentTypeId}/entries/{entryId}";
         if (!string.IsNullOrWhiteSpace(locale))
+        {
             endpoint = endpoint.SetQueryParameter("locale", locale);
+        }
 
         var request = new ContentstackRequest(endpoint, Method.Put, Creds)
             .WithJsonBody(new
@@ -364,6 +402,11 @@ public class EntriesActions : AppInvocable
         }
         catch (Exception ex)
         {
+            if (ex.Message.Contains("is not a valid enum value for") || ex.Message.Contains("Language was not found"))
+            {
+                throw new PluginApplicationException(ex.Message);
+            }
+
             throw new(
                 $"Entry update failed. Exception: {ex}; Exception type: {ex.GetType().Name}; Content type schema: {contentTypeObj.Schema}; Entry JSON: {entryObject};");
         }

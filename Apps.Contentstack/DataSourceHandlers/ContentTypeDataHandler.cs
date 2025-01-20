@@ -7,12 +7,9 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers;
 
-public class ContentTypeDataHandler : AppInvocable, IAsyncDataSourceItemHandler
+public class ContentTypeDataHandler(InvocationContext invocationContext)
+    : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    public ContentTypeDataHandler(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
@@ -23,7 +20,6 @@ public class ContentTypeDataHandler : AppInvocable, IAsyncDataSourceItemHandler
             .Where(x => context.SearchString is null ||
                         x.Title.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.CreatedAt)
-            .Take(50)
             .Select(x => new DataSourceItem(x.Uid, x.Title));
     }
 }

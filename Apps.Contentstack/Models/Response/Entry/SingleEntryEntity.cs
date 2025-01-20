@@ -17,5 +17,6 @@ public class SingleEntryEntity : EntryEntity
         InProgress = entry.InProgress;
         Workflow = entry.Workflow;
         AssetIds = assetIds;
+        Version = entry.Version;
     }
 }

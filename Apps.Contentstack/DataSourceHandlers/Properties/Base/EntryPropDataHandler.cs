@@ -10,20 +10,14 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers.Properties.Base;
 
-public abstract class EntryPropDataHandler : AppInvocable, IAsyncDataSourceItemHandler
+public abstract class EntryPropDataHandler(InvocationContext invocationContext, string entryId, string contentTypeId)
+    : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    private string ContentTypeId { get; }
+    private string ContentTypeId { get; } = contentTypeId;
 
-    protected string EntryId { get; }
+    protected string EntryId { get; } = entryId;
 
     protected abstract string DataType { get; }
-
-    protected EntryPropDataHandler(InvocationContext invocationContext, string entryId, string contentTypeId) : base(
-        invocationContext)
-    {
-        EntryId = entryId;
-        ContentTypeId = contentTypeId;
-    }
 
 
     public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,

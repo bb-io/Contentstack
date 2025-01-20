@@ -6,12 +6,9 @@ using RestSharp;
 
 namespace Apps.Contentstack.Api;
 
-public class ContentstackRequest : BlackBirdRestRequest
+public class ContentstackRequest(string resource, Method method, IEnumerable<AuthenticationCredentialsProvider> creds)
+    : BlackBirdRestRequest(resource, method, creds)
 {
-    public ContentstackRequest(string resource, Method method, IEnumerable<AuthenticationCredentialsProvider> creds) : base(resource, method, creds)
-    {
-    }
-
     protected override void AddAuth(IEnumerable<AuthenticationCredentialsProvider> creds)
     {
         this.AddHeader("api_key", creds.Get(CredsNames.StackApiKey).Value);
