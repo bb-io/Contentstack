@@ -12,6 +12,9 @@ public class EntryEntity
     
     [Display("Created at")]
     public DateTime CreatedAt { get; set; }
+
+    [DefinitionIgnore, JsonProperty("_version")]
+    public int Version { get; set; }
     
     public IEnumerable<string> Tags { get; set; }
     

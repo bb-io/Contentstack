@@ -5,13 +5,10 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentstack.DataSourceHandlers.Properties;
 
-public class EntryDatePropDataHandler : EntryPropDataHandler
+public class EntryDatePropDataHandler(
+    InvocationContext invocationContext,
+    [ActionParameter] EntryDatePropRequest request)
+    : EntryPropDataHandler(invocationContext, request.EntryId, request.ContentTypeId)
 {
     protected override string DataType => "isodate";
-
-
-    public EntryDatePropDataHandler(InvocationContext invocationContext,
-        [ActionParameter] EntryDatePropRequest request) : base(invocationContext, request.EntryId, request.ContentTypeId)
-    {
-    }
 }

@@ -7,12 +7,9 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers;
 
-public class WorkflowStageDataHandler : AppInvocable, IAsyncDataSourceItemHandler
+public class WorkflowStageDataHandler(InvocationContext invocationContext)
+    : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    public WorkflowStageDataHandler(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {

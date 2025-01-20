@@ -7,12 +7,9 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers;
 
-public class LanguageDataHandler : AppInvocable, IAsyncDataSourceItemHandler
+public class LanguageDataHandler(InvocationContext invocationContext)
+    : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    public LanguageDataHandler(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var request = new ContentstackRequest("v3/locales", Method.Get, Creds);
@@ -21,7 +18,6 @@ public class LanguageDataHandler : AppInvocable, IAsyncDataSourceItemHandler
         return response.Locales
             .Where(x => context.SearchString is null ||
                         x.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
-            .Take(50)
             .Select(x => new DataSourceItem(x.Code, x.Name));
     }
 }

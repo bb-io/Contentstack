@@ -7,15 +7,10 @@ using RestSharp;
 
 namespace Apps.Contentstack.DataSourceHandlers.Entry.Base;
 
-public class EntryDataHandler : AppInvocable, IAsyncDataSourceItemHandler
+public class EntryDataHandler(InvocationContext invocationContext, string contentTypeId)
+    : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    private string ContentTypeId { get; }
-
-    public EntryDataHandler(InvocationContext invocationContext, string contentTypeId) : base(
-        invocationContext)
-    {
-        ContentTypeId = contentTypeId;
-    }
+    private string ContentTypeId { get; } = contentTypeId;
 
     public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {

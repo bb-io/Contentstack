@@ -10,16 +10,12 @@ using RestSharp;
 
 namespace Apps.Contentstack.Api;
 
-public class ContentstackClient : BlackBirdRestClient
+public class ContentstackClient(AuthenticationCredentialsProvider[] creds) : BlackBirdRestClient(new()
+{
+    BaseUrl = $"{creds.Get(CredsNames.Host).Value}".ToUri()
+})
 {
     protected override JsonSerializerSettings? JsonSettings => JsonConfig.Settings;
-
-    public ContentstackClient(AuthenticationCredentialsProvider[] creds) : base(new()
-    {
-        BaseUrl = $"{creds.Get(CredsNames.Host).Value}".ToUri()
-    })
-    {
-    }
 
     protected override Exception ConfigureErrorException(RestResponse response)
     {
@@ -29,6 +25,6 @@ public class ContentstackClient : BlackBirdRestClient
         }
 
         var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content!, JsonSettings)!;
-        return new(error.ErrorMessage + $"; {error.Errors}");
+        return new PluginApplicationException(error.ErrorMessage + $"; {error.Errors}");
     }
 }

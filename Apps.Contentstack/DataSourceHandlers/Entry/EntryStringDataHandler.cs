@@ -5,10 +5,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentstack.DataSourceHandlers.Entry;
 
-public class EntryStringDataHandler : EntryDataHandler
-{
-    public EntryStringDataHandler(InvocationContext invocationContext, [ActionParameter] EntryStringPropRequest request)
-        : base(invocationContext, request.ContentTypeId)
-    {
-    }
-}
+public class EntryStringDataHandler(
+    InvocationContext invocationContext,
+    [ActionParameter] EntryStringPropRequest request)
+    : EntryDataHandler(invocationContext, request.ContentTypeId);
