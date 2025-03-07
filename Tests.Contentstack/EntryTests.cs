@@ -45,7 +45,7 @@ namespace Tests.Contentstack
             var localeRequest = new LocaleRequest { };
             var fileRequest = new FileExtensionRequest { };
 
-            var result = await action.AddTagToEntry(entryRequest, "insights explore toolkit1", localeRequest);
+            var result = await action.AddTagToEntry(entryRequest, "insights explore toolkit2", localeRequest);
             Assert.IsNotNull(result);
         }
 

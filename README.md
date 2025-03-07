@@ -47,6 +47,8 @@ Before you can connect you need to make sure that:
 - **Update entry content from HTML** updates entry content from HTML file.
 - **Get IDs from HTML** extracts content type and entry IDs from HTML file
 - **Publish entry** publish a specific entry based on ID
+- **Add tag to entry** adds tag to specific entry
+- **Remove tag from entry** removes tag from specific entry
 
 ## Events
 
