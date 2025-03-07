@@ -8,7 +8,9 @@ public class EntryPayload
     public string Uid { get; set; }
     
     public string Title { get; set; }
-    
+
+    public IEnumerable<string> Tags { get; set; }
+
     [Display("Created at")]
     public DateTime CreatedAt { get; set; }
 }
