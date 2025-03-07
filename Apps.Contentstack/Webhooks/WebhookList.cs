@@ -86,9 +86,8 @@ public class WebhookList
         }
         if (!string.IsNullOrEmpty(contentTypeRequest.Tag))
         {
-            var entryObject = JObject.FromObject(result.Data.Entry);
-            var tags = entryObject["tags"] as JArray;
-            if (tags == null || !tags.Any(t => t.ToString().Trim().Contains(contentTypeRequest.Tag.Trim(), StringComparison.OrdinalIgnoreCase)))
+            var tags = result.Data.Entry.Tags;
+            if (tags == null || !tags.Any(t => t.Trim().Contains(contentTypeRequest.Tag.Trim(), StringComparison.OrdinalIgnoreCase)))
             {
                 return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
                 {
