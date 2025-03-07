@@ -48,7 +48,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             var result = await SearchEntries(new()
             {
                 ContentTypeId = contentType.Uid
-            }, new(), new());
+            }, new(), new(),new());
 
             bool isWorkflowStageFilterProvided = request.WorkflowStages != null && request.WorkflowStages.Any();
             if (isWorkflowStageFilterProvided)
@@ -72,11 +72,12 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     [Action("Search entries", Description = "Search for entries based on the provided filters")]
     public async Task<ListEntriesResponse> SearchEntries(
         [ActionParameter] ContentTypeRequest contentType,
-        [ActionParameter] WorkflowStageFilterRequest input,
-        [ActionParameter] LocaleRequest locale)
+        [ActionParameter] WorkflowStageFilterRequest workflowFilter,
+        [ActionParameter] LocaleRequest locale,
+        [ActionParameter] TagFilterRequest tagFilter)
     {
         var endpoint = $"v3/content_types/{contentType.ContentTypeId}/entries"
-            .SetQueryParameter("include_workflow", "true");
+        .SetQueryParameter("include_workflow", "true");
 
         if (!string.IsNullOrWhiteSpace(locale.Locale))
             endpoint = endpoint.SetQueryParameter("locale", locale.Locale);
@@ -85,13 +86,19 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var result = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);
 
         var entries = result.Entries
-            .Where(x => input.WorkflowStageId is null || x.Workflow?.Uid == input.WorkflowStageId)
-            .ToArray();
+            .Where(x => workflowFilter.WorkflowStageId is null || x.Workflow?.Uid == workflowFilter.WorkflowStageId);
 
-        return new()
+        if (!string.IsNullOrWhiteSpace(tagFilter.Tag))
         {
-            Entries = entries,
-            Count = entries.Length
+            entries = entries.Where(x => x.Tags != null && x.Tags.Any(t => t.Equals(tagFilter.Tag, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        var filteredEntries = entries.ToArray();
+
+        return new ListEntriesResponse
+        {
+            Entries = filteredEntries,
+            Count = filteredEntries.Length
         };
     }
 
@@ -173,6 +180,78 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return Client.ExecuteWithErrorHandling(request);
     }
 
+    [Action("Add tag to entry", Description = "Add tag to specific entry")]
+    public async Task<NoticeResponse> AddTagToEntry(
+    [ActionParameter] EntryRequest input,
+    [ActionParameter, Display("Tag")] string tag,
+    [ActionParameter] LocaleRequest locale)
+    {
+        var entryObject = await GetEntryJObject(input.ContentTypeId, input.EntryId, locale.Locale);
+
+        JArray tagsArray;
+        if (entryObject["tags"] != null && entryObject["tags"].Type == JTokenType.Array)
+        {
+            tagsArray = (JArray)entryObject["tags"];
+        }
+        else
+        {
+            tagsArray = new JArray();
+        }
+
+        if (!tagsArray.Any(t => t.ToString().Equals(tag, StringComparison.OrdinalIgnoreCase)))
+        {
+            tagsArray.Add(tag);
+        }
+
+        entryObject["tags"] = tagsArray;
+
+        await UpdateEntry(input.ContentTypeId, input.EntryId, entryObject, locale.Locale);
+
+        return new NoticeResponse { Notice = "Tag added successfully" };
+    }
+
+    [Action("Remove tag from entry", Description = "Remove tag from specific entry")]
+    public async Task<NoticeResponse> RemoveTagFromEntry(
+    [ActionParameter] EntryRequest input,
+    [ActionParameter, Display("Tag")] string tag,
+    [ActionParameter] LocaleRequest locale)
+    {
+        var entryObject = await GetEntryJObject(input.ContentTypeId, input.EntryId, locale.Locale);
+
+        if (entryObject["tags"] != null && entryObject["tags"].Type == JTokenType.Array)
+        {
+            var tagsArray = (JArray)entryObject["tags"];
+
+            var tagsToRemove = tagsArray
+                .Where(t => t.ToString().Equals(tag, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (tagsToRemove.Any())
+            {
+                foreach (var token in tagsToRemove)
+                {
+                    token.Remove();
+                }
+
+                await UpdateEntry(input.ContentTypeId, input.EntryId, entryObject, locale.Locale);
+                return new NoticeResponse { Notice = "Tag removed successfully" };
+            }
+            else
+            {
+                return new NoticeResponse { Notice = "Tag not found in entry" };
+            }
+        }
+        else
+        {
+            return new NoticeResponse { Notice = "No tags exist in entry" };
+        }
+    }
+
+
+
+
+
+
     #region Get property
 
     [Action("Get entry string property", Description = "Get data of a specific entry string property")]
@@ -233,6 +312,10 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 .ToObject<bool>()
         };
     }
+
+
+
+
 
     #endregion
 

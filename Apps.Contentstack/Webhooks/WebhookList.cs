@@ -5,6 +5,7 @@ using Apps.Contentstack.Webhooks.Handlers.Entries;
 using Apps.Contentstack.Webhooks.Models;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.Webhooks;
 
@@ -83,7 +84,19 @@ public class WebhookList
                 });
             }
         }
-        
+        if (!string.IsNullOrEmpty(contentTypeRequest.Tag))
+        {
+            var tags = result.Data.Entry.Tags;
+            if (tags == null || !tags.Any(t => t.Trim().Contains(contentTypeRequest.Tag.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
+                {
+                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                    Result = null
+                });
+            }
+        }
+
         return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
         {
             HttpResponseMessage = null,
