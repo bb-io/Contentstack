@@ -9,4 +9,6 @@ public class ContentTypeOptionalRequest
     [Display("Content type ID")]
     [DataSource(typeof(ContentTypeDataHandler))]
     public string? ContentTypeId { get; set; }
+
+    public string? Tag { get; set; }
 }
