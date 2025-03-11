@@ -30,6 +30,7 @@ namespace Tests.Contentstack
             var result = await action.GetEntry(entryRequest, localeRequest, fileRequest);
 
             Console.WriteLine(result.Uid);
+            Console.WriteLine(result.Locale);
             Assert.IsNotNull(result);
         }
 

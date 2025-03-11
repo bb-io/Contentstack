@@ -11,6 +11,7 @@ public class SingleEntryEntity : EntryEntity
     public SingleEntryEntity(EntryEntity entry, List<string> assetIds)
     {
         Uid = entry.Uid;
+        Locale = entry.Locale;
         Title = entry.Title;
         CreatedAt = entry.CreatedAt;
         Tags = entry.Tags;

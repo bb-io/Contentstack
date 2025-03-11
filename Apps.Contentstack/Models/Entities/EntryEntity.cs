@@ -7,7 +7,11 @@ public class EntryEntity
 {
     [Display("Entry ID")]
     public string Uid { get; set; }
-    
+
+    [Display("Locale")]
+    [JsonProperty("locale")]
+    public string Locale { get; set; }
+
     public string Title { get; set; }
     
     [Display("Created at")]
