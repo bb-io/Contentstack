@@ -34,7 +34,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     public async Task<CalculateAllEntriesResponse> CalculateAllEntries(
         [ActionParameter] CalculateEntriesRequest request)
     {
-        var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes();
+        var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes(null);
         var entries = new List<EntryEntity>();
 
         foreach (var contentType in contentTypes.Items)
