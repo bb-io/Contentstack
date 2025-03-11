@@ -16,7 +16,7 @@ public class ContentTypesActions : AppInvocable
     {
     }
     
-    [Action("List content types", Description = "List all content types")]
+    [Action("Search content types", Description = "List all content types")]
     public async Task<ListContentTypesResponse> ListContentTypes([ActionParameter] ContentTypesRequest contentType)
     {
         var endpoint = "v3/content_types";
