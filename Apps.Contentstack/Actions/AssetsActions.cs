@@ -14,23 +14,16 @@ using RestSharp;
 namespace Apps.Contentstack.Actions;
 
 [ActionList]
-public class AssetsActions : AppInvocable
+public class AssetsActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(
+    invocationContext)
 {
-    private readonly IFileManagementClient _fileManagementClient;
-
-    public AssetsActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(
-        invocationContext)
-    {
-        _fileManagementClient = fileManagementClient;
-    }
-
     [Action("Download asset", Description = "Download content of a specific asset")]
     public async Task<FileResponse> DownloadAsset([ActionParameter] AssetRequest input)
     {
         var request = new ContentstackRequest($"v3/assets/{input.AssetId}", Method.Get, Creds);
         var asset = await Client.ExecuteWithErrorHandling<AssetResponse>(request);
 
-        var file = await FileDownloader.DownloadFileBytes(asset.Asset.Url, _fileManagementClient);
+        var file = await FileDownloader.DownloadFileBytes(asset.Asset.Url, fileManagementClient);
         file.Name = asset.Asset.Filename;
 
         return new(file);
@@ -39,13 +32,13 @@ public class AssetsActions : AppInvocable
     [Action("Upload asset", Description = "Upload a new asset")]
     public async Task UploadAsset([ActionParameter] UploadAssetRequest input)
     {
-        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var file = await fileManagementClient.DownloadAsync(input.File);
 
         var formData = new Dictionary<string, string>()
         {
-            ["asset[title]"] = input.Title,
-            ["asset[description]"] = input.Description,
-            ["asset[parent_uid]"] = input.ParentFolderId,
+            ["asset[title]"] = input.Title!,
+            ["asset[description]"] = input.Description!,
+            ["asset[parent_uid]"] = input.ParentFolderId!,
         }.AllIsNotNull();
         var request = new ContentstackRequest("v3/assets", Method.Post, Creds);
         formData.ToList().ForEach(x => request.AddParameter(x.Key, x.Value));
