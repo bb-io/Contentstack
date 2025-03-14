@@ -6,13 +6,14 @@ namespace Apps.Contentstack.Models.Entities;
 public class EntryEntity
 {
     [Display("Entry ID")]
-    public string Uid { get; set; }
+    public string Uid { get; set; } = string.Empty;
 
     [Display("Locale")]
     [JsonProperty("locale")]
-    public string Locale { get; set; }
+    public string Locale { get; set; } = string.Empty;
 
-    public string Title { get; set; }
+    [Display("Entry title")]
+    public string Title { get; set; } = string.Empty;
     
     [Display("Created at")]
     public DateTime CreatedAt { get; set; }
@@ -20,7 +21,7 @@ public class EntryEntity
     [DefinitionIgnore, JsonProperty("_version")]
     public int Version { get; set; }
     
-    public IEnumerable<string> Tags { get; set; }
+    public IEnumerable<string> Tags { get; set; } = new List<string>();
     
     [Display("In progress")]
     [JsonProperty("_in_progress")]

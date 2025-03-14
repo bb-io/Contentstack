@@ -355,7 +355,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
     [Action("Get entry content as HTML", Description = "Get content of a specific entry as HTML file")]
     public async Task<FileResponse> GetEntryAsHtml(
-        [ActionParameter] EntryRequest input, [ActionParameter] LocaleRequest locale)
+        [ActionParameter] EntryRequest input, 
+        [ActionParameter] LocaleRequest locale)
     {
         var contentType = await GetContentType(input.ContentTypeId);
 
@@ -363,8 +364,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var html = JsonToHtmlConverter.ToHtml(entry, contentType, InvocationContext.Logger, input.ContentTypeId,
             input.EntryId);
 
+        var entryTitle = entry["title"]?.ToString() ?? input.EntryId;
+        if(!string.IsNullOrEmpty(locale.Locale)) 
+        {
+            entryTitle = $"{entryTitle}_{locale.Locale}";
+        }
+        
         var file = await fileManagementClient.UploadAsync(new MemoryStream(html), MediaTypeNames.Text.Html,
-            $"{input.EntryId}.html");
+            $"{entryTitle}.html");
 
         return new(file);
     }
