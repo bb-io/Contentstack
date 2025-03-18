@@ -68,10 +68,8 @@ public static class HtmlToJsonConverter
             {
                 var path = x.Attributes[ConversionConstants.PathAttr].Value!;
                 var propertyValue = entry.SelectToken(path);
-
                 if (propertyValue == null)
                 {
-                    logger?.LogWarning.Invoke($"Path {path} not found in the entry", null);
                     return;
                 }
 
