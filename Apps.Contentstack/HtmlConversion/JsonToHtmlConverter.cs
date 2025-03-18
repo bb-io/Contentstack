@@ -41,30 +41,98 @@ public static class JsonToHtmlConverter
                 return;
 
             var max = x.ContentTypeSchema?["max"]?.Value<int>();
-            switch (x.DataType)
+            
+            if (x.Multiple && property is JArray propertyArray)
             {
-                case "json":
-                    JsonRichTextToHtml(doc, body, (property as JObject)!, max);
-                    break;
-                case "blocks":
-                    BlocksToHtml(doc, body, (property as JArray)!, x);
-                    break;
-                case "global_field":
-                    GlobalFieldToHtml(doc, body, (property as JObject)!, x, max);
-                    break;
-                case "link":
-                    LinkToHtml(doc, body, property as JObject, x, max);
-                    break;
-                case "group" when x.Uid == "comments":
-                    CommentsToHtml(doc, body, property as JObject, x, max);
-                    break;
-            }
-
-            if (property?.Type != JTokenType.String)
+                var containerNode = doc.CreateElement(HtmlConstants.Div);
+                containerNode.SetAttributeValue(ConversionConstants.PathAttr, x.Uid);
+                
+                if (max.HasValue)
+                {
+                    containerNode.SetAttributeValue("max", max.Value.ToString());
+                }
+                
+                // Create individual item containers for each array element
+                foreach (var item in propertyArray)
+                {
+                    var itemContainer = doc.CreateElement("div");
+                    
+                    // For rich text, we preserve the HTML structure but wrap it in a container
+                    if (x.DataType == "text" && 
+                        item.ToString().StartsWith("<") && 
+                        item.ToString().EndsWith(">"))
+                    {
+                        itemContainer.SetAttributeValue("class", ConversionConstants.MultipleItemClass);
+                        itemContainer.InnerHtml = item.ToString();
+                    }
+                    else
+                    {
+                        itemContainer.SetAttributeValue("class", ConversionConstants.MultipleComplexItemClass);
+                        ProcessPropertyByType(item, x, doc, itemContainer, max);
+                    }
+                    
+                    containerNode.AppendChild(itemContainer);
+                }
+                
+                body.AppendChild(containerNode);
                 return;
-
-            AppendContent(doc, body, property, HtmlConstants.Div, max);
+            }
+            
+            ProcessPropertyByType(property, x, doc, body, max);
         });
+    }
+    
+    private static void ProcessPropertyByType(JToken property, EntryProperty entryProperty, HtmlDocument doc, 
+        HtmlNode parentNode, int? max = null)
+    {
+        if (property == null)
+            return;
+            
+        switch (entryProperty.DataType)
+        {
+            case "json":
+                JsonRichTextToHtml(doc, parentNode, property as JObject, max);
+                break;
+            case "blocks":
+                BlocksToHtml(doc, parentNode, property as JArray, entryProperty);
+                break;
+            case "global_field":
+                GlobalFieldToHtml(doc, parentNode, property as JObject, entryProperty, max);
+                break;
+            case "link":
+                LinkToHtml(doc, parentNode, property as JObject, entryProperty, max);
+                break;
+            case "group" when entryProperty.Uid == "comments":
+                CommentsToHtml(doc, parentNode, property as JObject, entryProperty, max);
+                break;
+            case "group":
+                GroupToHtml(doc, parentNode, property as JObject, entryProperty, max);
+                break;
+            default:
+                if (property.Type == JTokenType.String)
+                {
+                    // Handle rich text content in string format
+                    string stringValue = property.ToString();
+                    if (stringValue.StartsWith("<") && stringValue.EndsWith(">"))
+                    {
+                        var contentNode = doc.CreateElement(HtmlConstants.Div);
+                        contentNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
+                        
+                        if (max.HasValue)
+                        {
+                            contentNode.SetAttributeValue("max", max.Value.ToString());
+                        }
+                        
+                        contentNode.InnerHtml = stringValue;
+                        parentNode.AppendChild(contentNode);
+                    }
+                    else
+                    {
+                        AppendContent(doc, parentNode, property, HtmlConstants.Div, max);
+                    }
+                }
+                break;
+        }
     }
 
     private static void BlocksToHtml(HtmlDocument doc, HtmlNode body, JArray? blocks, EntryProperty entryProperty)
@@ -167,5 +235,49 @@ public static class JsonToHtmlConverter
     
         AppendContent(doc, body, property["comment"]!, HtmlConstants.Div, max);
         LinkToHtml(doc, body, property["call_to_action"] as JObject, entryProperty, max);
+    }
+
+    private static void GroupToHtml(HtmlDocument doc, HtmlNode parentNode, JObject? groupProperty, EntryProperty entryProperty, int? max = null)
+    {
+        if (groupProperty is null || entryProperty.Schema is null)
+            return;
+            
+        var groupContainer = doc.CreateElement(HtmlConstants.Div);
+        groupContainer.SetAttributeValue(ConversionConstants.PathAttr, entryProperty.Uid);
+        
+        if (max.HasValue)
+        {
+            groupContainer.SetAttributeValue("max", max.Value.ToString());
+        }
+        
+        // Process each property in the group
+        foreach (var property in groupProperty.Properties())
+        {
+            // Skip metadata and other special properties
+            if (property.Name.StartsWith("_"))
+                continue;
+                
+            // Find the schema for this property
+            var propertySchema = entryProperty.Schema.FirstOrDefault(s => s["uid"]?.ToString() == property.Name);
+            if (propertySchema != null)
+            {
+                // Create entry property for nested field
+                var nestedProperty = new EntryProperty
+                {
+                    Uid = property.Name,
+                    DataType = propertySchema["data_type"]?.ToString()
+                };
+                
+                // Process the nested property
+                ProcessPropertyByType(property.Value, nestedProperty, doc, groupContainer);
+            }
+            else
+            {
+                // Fallback for properties without schema
+                AppendContent(doc, groupContainer, property.Value, HtmlConstants.Div);
+            }
+        }
+        
+        parentNode.AppendChild(groupContainer);
     }
 }

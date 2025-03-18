@@ -14,10 +14,52 @@ public static class HtmlToJsonConverter
     public static void UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger)
     {
         var doc = new HtmlDocument();
-        doc.Load(file);
+        doc.Load(file, System.Text.Encoding.UTF8);
 
         try
         {
+            // First handle simple repeatable fields
+            var repeatableNodes = doc.DocumentNode.Descendants()
+                .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null && 
+                       x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']") != null &&
+                       x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']").Count > 0)
+                .ToList();
+
+            foreach (var node in repeatableNodes)
+            {
+                var path = node.Attributes[ConversionConstants.PathAttr].Value!;
+                var arrayToken = entry.SelectToken(path) as JArray;
+                
+                if (arrayToken == null)
+                {
+                    logger?.LogWarning.Invoke($"Path {path} not found or is not an array in the entry", null);
+                    continue;
+                }
+
+                var multipleItems = node.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']").ToList();
+                
+                // Make sure we have the right number of items
+                if (multipleItems.Count != arrayToken.Count)
+                {
+                    logger?.LogWarning.Invoke($"Mismatch in array lengths for path {path}. HTML has {multipleItems.Count} items, JSON has {arrayToken.Count} items", null);
+                }
+
+                // Update each item in the array
+                for (int i = 0; i < Math.Min(multipleItems.Count, arrayToken.Count); i++)
+                {
+                    var itemValue = HttpUtility.HtmlDecode(multipleItems[i].InnerHtml.Trim());
+                    if (arrayToken[i] is JValue jValue)
+                    {
+                        jValue.Value = itemValue;
+                    }
+                    else
+                    {
+                        arrayToken[i] = itemValue;
+                    }
+                }
+            }
+
+            // Then handle all direct path mappings (including complex objects)
             var localizableNodes = doc.DocumentNode.Descendants()
                 .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
                 .ToList();
@@ -26,8 +68,15 @@ public static class HtmlToJsonConverter
             {
                 var path = x.Attributes[ConversionConstants.PathAttr].Value!;
                 var propertyValue = entry.SelectToken(path);
+                if (propertyValue == null)
+                {
+                    return;
+                }
 
-                (propertyValue as JValue)!.Value = HttpUtility.HtmlDecode(x.InnerHtml.Trim());
+                if (propertyValue is JValue jValue)
+                {
+                    jValue.Value = HttpUtility.HtmlDecode(x.InnerHtml.Trim());
+                }
             });
         }
         catch(Exception ex)
