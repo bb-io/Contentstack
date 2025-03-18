@@ -10,6 +10,9 @@ public class EntryProperty
     
     [JsonProperty("data_type")]
     public string DataType { get; set; }
+
+    [JsonProperty("multiple")]
+    public bool Multiple { get; set; }
     
     [JsonProperty("non_localizable")]
     public bool NonLocalizable { get; set; }

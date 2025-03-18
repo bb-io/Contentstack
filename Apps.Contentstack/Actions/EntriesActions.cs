@@ -247,11 +247,6 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         }
     }
 
-
-
-
-
-
     #region Get property
 
     [Action("Get entry string property", Description = "Get data of a specific entry string property")]

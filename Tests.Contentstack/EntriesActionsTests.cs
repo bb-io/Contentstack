@@ -3,6 +3,7 @@ using Apps.Contentstack.Models.Request;
 using Apps.Contentstack.Models.Request.ContentType;
 using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Request.Workflow;
+using Blackbird.Applications.Sdk.Common.Files;
 using OpenAITests.Base;
 
 namespace Tests.Contentstack;
@@ -35,18 +36,70 @@ public class EntriesActionsTests : TestBase
         var action = new EntriesActions(InvocationContext, FileManager);
         var entryRequest = new EntryRequest
         {
-            ContentTypeId = "missions",
-            EntryId = "bltb0b17fd01c287e55"
+            ContentTypeId = "repeating_fields",
+            EntryId = "bltda1e0b08782659f5"
         };
         var localeRequest = new LocaleRequest
         {
-            Locale = "en-gb"
+            Locale = "en-us"
         };
 
         var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
 
         Assert.IsNotNull(result);
         Assert.IsNotNull(result.File);
+    }
+
+    
+    [TestMethod]
+    public async Task GetEntryAsHtml_ComplexObject_ReturnsHtmlContent()
+    {
+        var action = new EntriesActions(InvocationContext, FileManager);
+        var entryRequest = new EntryRequest
+        {
+            ContentTypeId = "repeating_complex_fields",
+            EntryId = "bltca8323a6a8c3c3c1"
+        };
+        var localeRequest = new LocaleRequest
+        {
+            Locale = "en-us"
+        };
+
+        var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
+
+        Assert.IsNotNull(result);
+        Assert.IsNotNull(result.File);
+    }
+
+    [TestMethod]
+    public async Task UpdateEntryFromHtml_WithAttachedFile_ShouldUpdateEntry()
+    {
+        var action = new EntriesActions(InvocationContext, FileManager);
+        var fileReference = new FileReference { Name = "Repeitable onderzoek_en-us.html" };
+        var fileRequest = new FileRequest { File = fileReference };
+
+        // Act
+        var result = await action.UpdateEntryFromHtml(new(), fileRequest, new());
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual("repeating_fields", result.ContentTypeId);
+    }
+
+    
+    [TestMethod]
+    public async Task UpdateEntryFromHtml_ComplexEntry_ShouldUpdateEntry()
+    {
+        var action = new EntriesActions(InvocationContext, FileManager);
+        var fileReference = new FileReference { Name = "Complex entry_en_us.html" };
+        var fileRequest = new FileRequest { File = fileReference };
+
+        // Act
+        var result = await action.UpdateEntryFromHtml(new(), fileRequest, new());
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual("repeating_complex_fields", result.ContentTypeId);
     }
 
     [TestMethod]
