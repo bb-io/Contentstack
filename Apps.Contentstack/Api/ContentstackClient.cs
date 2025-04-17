@@ -17,14 +17,43 @@ public class ContentstackClient(AuthenticationCredentialsProvider[] creds) : Bla
 {
     protected override JsonSerializerSettings? JsonSettings => JsonConfig.Settings;
 
-    protected override Exception ConfigureErrorException(RestResponse response)
+    public override async Task<T> ExecuteWithErrorHandling<T>(RestRequest request)
     {
-        if (response.Content == null)
+        string content = (await ExecuteWithErrorHandling(request)).Content;
+        T val = JsonConvert.DeserializeObject<T>(content, JsonSettings);
+        if (val == null)
         {
-            return new(response.ErrorMessage);
+            throw new Exception($"Could not parse {content} to {typeof(T)}");
         }
 
-        var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content!, JsonSettings)!;
+        return val;
+    }
+
+    public override async Task<RestResponse> ExecuteWithErrorHandling(RestRequest request)
+    {
+        RestResponse restResponse = await ExecuteAsync(request);
+        if (!restResponse.IsSuccessStatusCode)
+        {
+            throw ConfigureErrorException(restResponse);
+        }
+
+        return restResponse;
+    }
+
+
+    protected override Exception ConfigureErrorException(RestResponse response)
+    {
+        if (string.IsNullOrEmpty(response.Content))
+            return new PluginApplicationException(response.ErrorMessage);
+
+        var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content, JsonSettings)!;
+
+        if (error.Errors != null && error.Errors.TryGetValue("title", out var titleErrors))
+        {
+            var detail = string.Join("; ", titleErrors);
+            return new PluginMisconfigurationException($"Field Title incorrect: {detail}");
+        }
+
         return new PluginApplicationException(error.ErrorMessage + $"; {error.Errors}");
     }
 }
