@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Apps.Contentstack.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 
 namespace Apps.Contentstack.Models.Request.Entry
 {
     public class TagFilterRequest
     {
+        [DataSource(typeof(TagDataSourceHandler))]
         public string? Tag { get; set; }
     }
 }

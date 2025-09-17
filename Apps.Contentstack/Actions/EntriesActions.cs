@@ -23,6 +23,8 @@ using Blackbird.Applications.Sdk.Utils.Extensions.String;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+using Apps.Contentstack.DataSourceHandlers;
 
 namespace Apps.Contentstack.Actions;
 
@@ -213,7 +215,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     [Action("Remove tag from entry", Description = "Remove tag from specific entry")]
     public async Task<NoticeResponse> RemoveTagFromEntry(
     [ActionParameter] EntryRequest input,
-    [ActionParameter, Display("Tag")] string tag,
+    [ActionParameter, Display("Tag")][DataSource(typeof(EntryTagDataSourceHandler))] string tag,
     [ActionParameter] LocaleRequest locale)
     {
         var entryObject = await GetEntryJObject(input.ContentTypeId, input.EntryId, locale.Locale);

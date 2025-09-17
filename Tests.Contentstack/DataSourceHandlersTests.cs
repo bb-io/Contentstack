@@ -55,4 +55,34 @@ public class DataSourceHandlersTests : TestBase
     {
         await AssertHandlerReturnsData(new EnvironmentDataHandler(InvocationContext));
     }
+
+
+    [TestMethod]
+    public async Task GetDataAsync_EntryTags_ReturnsNonEmptyCollection()
+    {
+        var handler = new EntryTagDataSourceHandler(InvocationContext, new Apps.Contentstack.Models.Request.Entry.EntryRequest { EntryId= "bltb0b17fd01c287e55", ContentTypeId= "missions" },
+            new Apps.Contentstack.Models.Request.LocaleRequest {  });
+        var result = await handler.GetDataAsync(new DataSourceContext { }, CancellationToken.None);
+
+        foreach (var item in result)
+        {
+            Console.WriteLine($"{item.Value}: {item.Key}");
+        }
+
+        Assert.IsNotNull(result);
+    }
+
+    [TestMethod]
+    public async Task GetDataAsync_TagDataSourceHandler_ReturnsNonEmptyCollection()
+    {
+        var handler = new TagDataSourceHandler(InvocationContext);
+        var result = await handler.GetDataAsync(new DataSourceContext { }, CancellationToken.None);
+
+        foreach (var item in result)
+        {
+            Console.WriteLine($"{item.Value}: {item.Key}");
+        }
+
+        Assert.IsNotNull(result);
+    }
 }
