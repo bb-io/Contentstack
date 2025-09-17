@@ -25,6 +25,9 @@ public class EntriesActionsTests : TestBase
 
         var result = await action.GetEntry(entryRequest, localeRequest, fileRequest);
 
+        var json = Newtonsoft.Json.JsonConvert.SerializeObject(result);
+        Console.WriteLine(json);
+
         Console.WriteLine(result.Uid);
         Console.WriteLine(result.Locale);
         Assert.IsNotNull(result);
