@@ -28,7 +28,7 @@ using Apps.Contentstack.DataSourceHandlers;
 
 namespace Apps.Contentstack.Actions;
 
-[ActionList]
+[ActionList("Entries")]
 public class EntriesActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : AppInvocable(invocationContext)
 {

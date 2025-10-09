@@ -9,13 +9,9 @@ using RestSharp;
 
 namespace Apps.Contentstack.Actions;
 
-[ActionList]
-public class ContentTypesActions : AppInvocable
+[ActionList("Content types")]
+public class ContentTypesActions(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    public ContentTypesActions(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-    
     [Action("Search content types", Description = "List all content types")]
     public async Task<ListContentTypesResponse> ListContentTypes([ActionParameter] ContentTypesRequest? contentType)
     {
