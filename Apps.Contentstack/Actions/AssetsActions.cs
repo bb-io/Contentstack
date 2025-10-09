@@ -13,7 +13,7 @@ using RestSharp;
 
 namespace Apps.Contentstack.Actions;
 
-[ActionList]
+[ActionList("Assets")]
 public class AssetsActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : AppInvocable(
     invocationContext)
 {

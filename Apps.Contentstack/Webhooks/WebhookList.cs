@@ -5,7 +5,6 @@ using Apps.Contentstack.Webhooks.Handlers.Entries;
 using Apps.Contentstack.Webhooks.Models;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.Webhooks;
 
