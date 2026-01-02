@@ -1,6 +1,5 @@
-using System.Globalization;
-using System.Net.Mime;
 using Apps.Contentstack.Api;
+using Apps.Contentstack.DataSourceHandlers;
 using Apps.Contentstack.HtmlConversion;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Entities;
@@ -15,16 +14,22 @@ using Apps.Contentstack.Models.Response.Entry;
 using Apps.Contentstack.Models.Response.Property;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
-using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using Blackbird.Applications.Sdk.Utils.Extensions.String;
+using Blackbird.Applications.SDK.Blueprints;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Filters.Transformations;
+using Blackbird.Filters.Xliff.Xliff2;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
-using Blackbird.Applications.Sdk.Common.Dynamic;
-using Apps.Contentstack.DataSourceHandlers;
+using System.Globalization;
+using System.Net.Mime;
+using System.Text;
 
 namespace Apps.Contentstack.Actions;
 
@@ -71,6 +76,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         };
     }
 
+    [BlueprintActionDefinition(BlueprintAction.SearchContent)]
     [Action("Search entries", Description = "Search for entries based on the provided filters")]
     public async Task<ListEntriesResponse> SearchEntries(
         [ActionParameter] ContentTypeRequest contentType,
@@ -79,7 +85,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] TagFilterRequest tagFilter)
     {
         var endpoint = $"v3/content_types/{contentType.ContentTypeId}/entries"
-        .SetQueryParameter("include_workflow", "true");
+            .SetQueryParameter("include_workflow", "true");
 
         if (!string.IsNullOrWhiteSpace(locale.Locale))
             endpoint = endpoint.SetQueryParameter("locale", locale.Locale);
@@ -110,7 +116,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] LocaleRequest locale,
         [ActionParameter] FileExtensionRequest fileExtension)
     {
-        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.EntryId}"
+        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.ContentId}"
             .SetQueryParameter("include_workflow", "true");
 
         if (!string.IsNullOrWhiteSpace(locale.Locale))
@@ -133,7 +139,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     {
         var entryEntity = await GetEntry(input, new() { Locale = publishEntryRequest.Locale }, new());
 
-        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.EntryId}/publish"
+        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.ContentId}/publish"
             .SetQueryParameter("publish_all_localized", "true");
 
         var dictionaryBody = new Dictionary<string, object>
@@ -166,7 +172,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] EntryRequest entry,
         [ActionParameter] WorkflowStageRequest input)
     {
-        var endpoint = $"v3/content_types/{entry.ContentTypeId}/entries/{entry.EntryId}/workflow";
+        var endpoint = $"v3/content_types/{entry.ContentTypeId}/entries/{entry.ContentId}/workflow";
         var request = new ContentstackRequest(endpoint, Method.Post, Creds)
             .WithJsonBody(new
             {
@@ -188,7 +194,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     [ActionParameter, Display("Tag")] string tag,
     [ActionParameter] LocaleRequest locale)
     {
-        var entryObject = await GetEntryJObject(input.ContentTypeId, input.EntryId, locale.Locale);
+        var entryObject = await GetEntryJObject(input.ContentTypeId, input.ContentId, locale.Locale);
 
         JArray tagsArray;
         if (entryObject["tags"] != null && entryObject["tags"].Type == JTokenType.Array)
@@ -207,7 +213,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
         entryObject["tags"] = tagsArray;
 
-        await UpdateEntry(input.ContentTypeId, input.EntryId, entryObject, locale.Locale);
+        await UpdateEntry(input.ContentTypeId, input.ContentId, entryObject, locale.Locale);
 
         return new NoticeResponse { Notice = "Tag added successfully" };
     }
@@ -218,7 +224,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     [ActionParameter, Display("Tag")][DataSource(typeof(EntryTagDataSourceHandler))] string tag,
     [ActionParameter] LocaleRequest locale)
     {
-        var entryObject = await GetEntryJObject(input.ContentTypeId, input.EntryId, locale.Locale);
+        var entryObject = await GetEntryJObject(input.ContentTypeId, input.ContentId, locale.Locale);
 
         if (entryObject["tags"] != null && entryObject["tags"].Type == JTokenType.Array)
         {
@@ -235,7 +241,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                     token.Remove();
                 }
 
-                await UpdateEntry(input.ContentTypeId, input.EntryId, entryObject, locale.Locale);
+                await UpdateEntry(input.ContentTypeId, input.ContentId, entryObject, locale.Locale);
                 return new NoticeResponse { Notice = "Tag removed successfully" };
             }
             else
@@ -310,10 +316,6 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         };
     }
 
-
-
-
-
     #endregion
 
     #region Set property
@@ -350,51 +352,63 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
     #region HTML conversion
 
+    [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
     [Action("Get entry content as HTML", Description = "Get content of a specific entry as HTML file")]
-    public async Task<FileResponse> GetEntryAsHtml(
+    public async Task<GetEntryAsHtmlResponse> GetEntryAsHtml(
         [ActionParameter] EntryRequest input, 
         [ActionParameter] LocaleRequest locale)
     {
         var contentType = await GetContentType(input.ContentTypeId);
 
-        var entry = await GetEntryJObject(input.ContentTypeId, input.EntryId, locale.Locale);
+        var entry = await GetEntryJObject(input.ContentTypeId, input.ContentId, locale.Locale);
         var html = JsonToHtmlConverter.ToHtml(entry, contentType, InvocationContext.Logger, input.ContentTypeId,
-            input.EntryId);
+            input.ContentId);
 
-        var entryTitle = entry["title"]?.ToString() ?? input.EntryId;
-        if(!string.IsNullOrEmpty(locale.Locale)) 
-        {
+        var entryTitle = entry["title"]?.ToString() ?? input.ContentId;
+        if (!string.IsNullOrEmpty(locale.Locale)) 
             entryTitle = $"{entryTitle}_{locale.Locale}";
-        }
         
-        var file = await fileManagementClient.UploadAsync(new MemoryStream(html), MediaTypeNames.Text.Html,
-            $"{entryTitle}.html");
+        var file = await fileManagementClient.UploadAsync(
+            new MemoryStream(html), 
+            MediaTypeNames.Text.Html, 
+            $"{entryTitle}.html"
+        );
 
         return new(file);
     }
 
+    [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Update entry content from HTML", Description = "Update content of a specific entry from HTML file")]
-    public async Task<UpdateEntryFromHtmlResponse> UpdateEntryFromHtml(
-        [ActionParameter] EntryOptionalRequest input,
-        [ActionParameter] FileRequest fileRequest,
-        [ActionParameter] LocaleRequest locale)
+    public async Task<UpdateEntryFromHtmlResponse> UpdateEntryFromHtml([ActionParameter] UpdateEntryFromHtmlRequest input)
     {
-        var file = await fileManagementClient.DownloadAsync(fileRequest.File);
-        var memoryStream = new MemoryStream();
-        await file.CopyToAsync(memoryStream);
+        using var memoryStream = new MemoryStream();
+        var file = await fileManagementClient.DownloadAsync(input.Content);
+        var originalBytes = await file.GetByteData(); 
+
+        var html = Encoding.UTF8.GetString(originalBytes);
+        if (Xliff2Serializer.IsXliff2(html))
+        {
+            var transformedHtml = Transformation.Parse(html, "entry.xlf").Target().Serialize()
+                ?? throw new PluginMisconfigurationException("XLIFF did not contain files");
+
+            await memoryStream.WriteAsync(Encoding.UTF8.GetBytes(transformedHtml));
+        }
+        else
+            await memoryStream.WriteAsync(originalBytes);
+
         memoryStream.Position = 0;
 
         var (extractedContentTypeId, extractedEntryId) = HtmlToJsonConverter.ExtractContentTypeAndEntryId(memoryStream);
 
         var contentTypeId = input.ContentTypeId ?? extractedContentTypeId ??
             throw new PluginMisconfigurationException("Content type ID is missing. Please provide it as an input or in the HTML file meta tag");
-        var entryId = input.EntryId ?? extractedEntryId ??
+        var entryId = input.ContentId ?? extractedEntryId ??
             throw new PluginMisconfigurationException("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
         var entry = await GetEntryJObject(contentTypeId, entryId);
         HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
 
-        await UpdateEntry(contentTypeId, entryId, entry, locale.Locale);
+        await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
         return new()
         {

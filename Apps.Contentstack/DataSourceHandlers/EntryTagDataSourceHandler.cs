@@ -29,7 +29,7 @@ public class EntryTagDataSourceHandler : AppInvocable, IAsyncDataSourceHandler
 
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext _, CancellationToken __)
     {
-        var endpoint = $"v3/content_types/{entry.ContentTypeId}/entries/{entry.EntryId}";
+        var endpoint = $"v3/content_types/{entry.ContentTypeId}/entries/{entry.ContentId}";
         if (!string.IsNullOrWhiteSpace(locale?.Locale))
             endpoint = endpoint.SetQueryParameter("locale", locale.Locale);
 

@@ -1,12 +1,14 @@
-using Blackbird.Applications.Sdk.Common;
 using Newtonsoft.Json;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 
 namespace Apps.Contentstack.Models.Entities;
 
-public class EntryEntity
+public class EntryEntity : IDownloadContentInput
 {
     [Display("Entry ID")]
-    public string Uid { get; set; } = string.Empty;
+    [JsonProperty("uid")]
+    public string ContentId { get; set; } = string.Empty;
 
     [Display("Locale")]
     [JsonProperty("locale")]
