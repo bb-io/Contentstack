@@ -1,10 +1,10 @@
-﻿using Apps.Contentstack.Actions;
+﻿using Tests.Contentstack.Base;
+using Apps.Contentstack.Actions;
 using Apps.Contentstack.Models.Request;
 using Apps.Contentstack.Models.Request.ContentType;
 using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Request.Workflow;
 using Blackbird.Applications.Sdk.Common.Files;
-using OpenAITests.Base;
 
 namespace Tests.Contentstack;
 
@@ -18,7 +18,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "missions",
-            EntryId = "bltb0b17fd01c287e55"
+            ContentId = "bltb0b17fd01c287e55"
         };
         var localeRequest = new LocaleRequest { };
         var fileRequest = new FileExtensionRequest { };
@@ -28,7 +28,7 @@ public class EntriesActionsTests : TestBase
         var json = Newtonsoft.Json.JsonConvert.SerializeObject(result);
         Console.WriteLine(json);
 
-        Console.WriteLine(result.Uid);
+        Console.WriteLine(result.ContentId);
         Console.WriteLine(result.Locale);
         Assert.IsNotNull(result);
     }
@@ -40,7 +40,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "repeating_fields",
-            EntryId = "bltda1e0b08782659f5"
+            ContentId = "bltda1e0b08782659f5"
         };
         var localeRequest = new LocaleRequest
         {
@@ -61,7 +61,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "repeating_complex_fields",
-            EntryId = "bltca8323a6a8c3c3c1"
+            ContentId = "bltca8323a6a8c3c3c1"
         };
         var localeRequest = new LocaleRequest
         {
@@ -112,7 +112,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "missions",
-            EntryId = "bltb0b17fd01c287e55"
+            ContentId = "bltb0b17fd01c287e55"
         };
         var localeRequest = new LocaleRequest { };
         var fileRequest = new FileExtensionRequest { };
@@ -128,7 +128,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "missions",
-            EntryId = "bltb0b17fd01c287e55"
+            ContentId = "bltb0b17fd01c287e55"
         };
         var localeRequest = new LocaleRequest { };
         var fileRequest = new FileExtensionRequest { };
@@ -150,7 +150,7 @@ public class EntriesActionsTests : TestBase
         var result = await action.SearchEntries(contenteRequest, workflowRequest, localeRequest, tagFilter);
         foreach (var item in result.Entries)
         {
-            Console.WriteLine($"{item.Uid} - {item.Title} - {item.Tags}");
+            Console.WriteLine($"{item.ContentId} - {item.Title} - {item.Tags}");
             Assert.IsNotNull(item);
         }
     }
