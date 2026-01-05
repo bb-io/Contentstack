@@ -52,17 +52,19 @@ Before you can connect you need to make sure that:
 
 ## Events
 
-### Entries
+### Assets
 
 - **On asset deleted**
 - **On asset published**
 - **On asset unpublished**
+
+### Entries
+
 - **On entry created**
 - **On entry deleted**
 - **On entry published**
 - **On entry unpublished**
 - **On entry updated**
-
 
 ## HTML features
 

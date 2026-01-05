@@ -1,71 +1,42 @@
-using Apps.Contentstack.Constants;
-using Apps.Contentstack.Models.Request.ContentType;
-using Apps.Contentstack.Webhooks.Handlers.Assets;
-using Apps.Contentstack.Webhooks.Handlers.Entries;
-using Apps.Contentstack.Webhooks.Models;
-using Apps.Contentstack.Webhooks.Models.Payloads;
-using Blackbird.Applications.Sdk.Common.Webhooks;
-using Blackbird.Applications.SDK.Blueprints;
 using Newtonsoft.Json;
+using Apps.Contentstack.Constants;
+using Apps.Contentstack.Webhooks.Models;
+using Apps.Contentstack.Webhooks.Handlers.Entries;
+using Apps.Contentstack.Webhooks.Models.Payloads;
+using Apps.Contentstack.Models.Request.ContentType;
+using Blackbird.Applications.SDK.Blueprints;
+using Blackbird.Applications.Sdk.Common.Webhooks;
 
 namespace Apps.Contentstack.Webhooks;
 
 [WebhookList("Entries")]
 public class WebhookList
 {
-    #region Assets
-
-    [Webhook("On asset deleted", typeof(AssetDeletedHandler),
-        Description = "On any asset deleted")]
-    public Task<WebhookResponse<AssetWebhookResponse>> OnAssetDeleted(WebhookRequest webhookRequest)
-        => HandleWebhook<AssetWebhookResponse>(webhookRequest);
-
-    [Webhook("On asset published", typeof(AssetPublishedHandler),
-        Description = "On any asset published")]
-    public Task<WebhookResponse<AssetWebhookResponse>> OnAssetPublished(WebhookRequest webhookRequest)
-        => HandleWebhook<AssetWebhookResponse>(webhookRequest);
-
-    [Webhook("On asset unpublished", typeof(AssetUnpublishedHandler),
-        Description = "On any asset unpublished")]
-    public Task<WebhookResponse<AssetWebhookResponse>> OnAssetUnpublished(WebhookRequest webhookRequest)
-        => HandleWebhook<AssetWebhookResponse>(webhookRequest);
-
-    #endregion
-
-    #region Entries
-
-    [Webhook("On entry created", typeof(EntryCreatedHandler),
-        Description = "On any entry created")]
+    [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On any entry created")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryCreated(WebhookRequest webhookRequest,
         [WebhookParameter] ContentTypeOptionalRequest contentTypeRequest)
         => HandleEntryWebhook(webhookRequest, contentTypeRequest);
 
-    [Webhook("On entry deleted", typeof(EntryDeletedHandler),
-        Description = "On any entry deleted")]
+    [Webhook("On entry deleted", typeof(EntryDeletedHandler), Description = "On any entry deleted")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryDeleted(WebhookRequest webhookRequest,
         [WebhookParameter] ContentTypeOptionalRequest contentTypeRequest)
         => HandleEntryWebhook(webhookRequest, contentTypeRequest);
 
-    [Webhook("On entry published", typeof(EntryPublishedHandler),
-        Description = "On any entry published")]
+    [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdated)]
+    [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On any entry published")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryPublished(WebhookRequest webhookRequest,
         [WebhookParameter] ContentTypeOptionalRequest contentTypeRequest)
         => HandleEntryWebhook(webhookRequest, contentTypeRequest);
 
-    [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler),
-        Description = "On any entry unpublished")]
+    [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On any entry unpublished")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryUnpublished(WebhookRequest webhookRequest,
         [WebhookParameter] ContentTypeOptionalRequest contentTypeRequest)
         => HandleEntryWebhook(webhookRequest, contentTypeRequest);
 
-    [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdated)]
-    [Webhook("On entry updated", typeof(EntryUpdatedHandler),
-        Description = "On any entry updated")]
+    [Webhook("On entry updated", typeof(EntryUpdatedHandler), Description = "On any entry updated")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryUpdated(WebhookRequest webhookRequest,
         [WebhookParameter] ContentTypeOptionalRequest contentTypeRequest)
         => HandleEntryWebhook(webhookRequest, contentTypeRequest);
-
-    #endregion
 
     private Task<WebhookResponse<EntryWebhookResponse>> HandleEntryWebhook(WebhookRequest webhookRequest,
         ContentTypeOptionalRequest contentTypeRequest)
@@ -103,20 +74,6 @@ public class WebhookList
         {
             HttpResponseMessage = null,
             Result = new EntryWebhookResponse(result.Data)
-        });
-    }
-    
-    private static Task<WebhookResponse<T>> HandleWebhook<T>(WebhookRequest webhookRequest) where T : class
-    {
-        var payload = webhookRequest.Body.ToString();
-        ArgumentException.ThrowIfNullOrEmpty(payload, nameof(webhookRequest.Body));
-
-        var result = JsonConvert.DeserializeObject<ContentstackWebhookResponse<T>>(payload, JsonConfig.Settings)!;
-        
-        return Task.FromResult(new WebhookResponse<T>
-        {
-            HttpResponseMessage = null,
-            Result = result.Data
         });
     }
 }
