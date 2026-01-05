@@ -25,15 +25,12 @@ public abstract class ContentstackWebhookHandler : IWebhookEventHandler
             {
                 Webhook = new()
                 {
-                    Name = $"Blackbird-{Event}-{DateTimeOffset.Now.ToUnixTimeMilliseconds()}",
-                    Channels = new[] { Event },
-                    Destinations = new[]
-                    {
-                        new WebhookDestinationEntity()
-                        {
-                            TargetUrl = values[CredsNames.WebhookUrl]
-                        }
-                    },
+                    Name = $"Blackbird-{Event}-{DateTimeOffset.Now}",
+                    Channels = [Event],
+                    Destinations =
+                    [
+                        new WebhookDestinationEntity() { TargetUrl = values[CredsNames.WebhookUrl] }
+                    ],
                     RetryPolicy = "manual"
                 }
             }, JsonConfig.Settings);
