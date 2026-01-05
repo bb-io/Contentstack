@@ -3,7 +3,9 @@ using Apps.Contentstack.Models.Request.ContentType;
 using Apps.Contentstack.Webhooks.Handlers.Assets;
 using Apps.Contentstack.Webhooks.Handlers.Entries;
 using Apps.Contentstack.Webhooks.Models;
+using Apps.Contentstack.Webhooks.Models.Payloads;
 using Blackbird.Applications.Sdk.Common.Webhooks;
+using Blackbird.Applications.SDK.Blueprints;
 using Newtonsoft.Json;
 
 namespace Apps.Contentstack.Webhooks;
@@ -56,6 +58,7 @@ public class WebhookList
         [WebhookParameter] ContentTypeOptionalRequest contentTypeRequest)
         => HandleEntryWebhook(webhookRequest, contentTypeRequest);
 
+    [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdated)]
     [Webhook("On entry updated", typeof(EntryUpdatedHandler),
         Description = "On any entry updated")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryUpdated(WebhookRequest webhookRequest,
@@ -70,7 +73,7 @@ public class WebhookList
         var payload = webhookRequest.Body.ToString();
         ArgumentException.ThrowIfNullOrEmpty(payload, nameof(webhookRequest.Body));
 
-        var result = JsonConvert.DeserializeObject<ContentstackWebhookResponse<EntryWebhookResponse>>(payload, JsonConfig.Settings)!;
+        var result = JsonConvert.DeserializeObject<ContentstackWebhookResponse<EntryWebhookPayload>>(payload, JsonConfig.Settings)!;
 
         if (!string.IsNullOrEmpty(contentTypeRequest.ContentTypeId))
         {
@@ -99,11 +102,11 @@ public class WebhookList
         return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
         {
             HttpResponseMessage = null,
-            Result = result.Data
+            Result = new EntryWebhookResponse(result.Data)
         });
     }
     
-    private Task<WebhookResponse<T>> HandleWebhook<T>(WebhookRequest webhookRequest) where T : class
+    private static Task<WebhookResponse<T>> HandleWebhook<T>(WebhookRequest webhookRequest) where T : class
     {
         var payload = webhookRequest.Body.ToString();
         ArgumentException.ThrowIfNullOrEmpty(payload, nameof(webhookRequest.Body));
