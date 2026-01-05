@@ -79,7 +79,7 @@ public class EntriesActionsTests : TestBase
     {
         var action = new EntriesActions(InvocationContext, FileManager);
         var fileReference = new FileReference { Name = "Repeitable onderzoek_en-us.html" };
-        var request = new UpdateEntryFromHtmlRequest { Content = fileReference };
+        var request = new UploadEntryRequest { Content = fileReference };
 
         // Act
         var result = await action.UpdateEntryFromHtml(request);
@@ -95,7 +95,7 @@ public class EntriesActionsTests : TestBase
     {
         var action = new EntriesActions(InvocationContext, FileManager);
         var fileReference = new FileReference { Name = "Complex entry_en_us.html" };
-        var request = new UpdateEntryFromHtmlRequest { Content = fileReference };
+        var request = new UploadEntryRequest { Content = fileReference };
 
         // Act
         var result = await action.UpdateEntryFromHtml(request);

@@ -7,7 +7,7 @@ using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 
 namespace Apps.Contentstack.Models.Request.Entry;
 
-public class UpdateEntryFromHtmlRequest : IUploadContentInput
+public class UploadEntryRequest : IUploadContentInput
 {
     [Display("Entry ID")]
     [DataSource(typeof(SimpleEntryDataHandler))]
@@ -17,8 +17,10 @@ public class UpdateEntryFromHtmlRequest : IUploadContentInput
     [DataSource(typeof(ContentTypeDataHandler))]
     public string? ContentTypeId { get; set; }
 
+    [Display("Content")]
     public FileReference Content { get; set; }
 
+    [Display("Locale")]
     [DataSource(typeof(LanguageDataHandler))]
     public string? Locale { get; set; }
 }

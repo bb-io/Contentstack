@@ -4,5 +4,5 @@ namespace Apps.Contentstack.Models.Request;
 
 public class FileRequest
 {
-    public FileReference File { get; set; }
+    public FileReference Content { get; set; }
 }

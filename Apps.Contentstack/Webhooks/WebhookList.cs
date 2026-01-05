@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 
 namespace Apps.Contentstack.Webhooks;
 
-[WebhookList]
+[WebhookList("Entries")]
 public class WebhookList
 {
     #region Assets

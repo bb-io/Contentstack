@@ -43,23 +43,25 @@ Before you can connect you need to make sure that:
 - **Get entry string/number/date/boolean property** gets data of the specified entry's property.
 - **Set entry string/number/date/boolean property** sets data to the specified entry's property.
 - **Search entries** returns a list of entries based on provided filter criterias.
-- **Get entry content as HTML** returns entry content converted to an HTML file.
-- **Update entry content from HTML** updates entry content from HTML file.
-- **Get IDs from HTML** extracts content type and entry IDs from HTML file
-- **Publish entry** publish a specific entry based on ID
-- **Add tag to entry** adds tag to specific entry
-- **Remove tag from entry** removes tag from specific entry
+- **Download entry content** downloads entry content converted to an HTML file.
+- **Upload entry content** updates entry content from a file.
+- **Get entry file metadata** extracts content type and entry IDs from a file.
+- **Publish entry** publish a specific entry based on ID.
+- **Add tag to entry** adds tag to specific entry.
+- **Remove tag from entry** removes tag from specific entry.
 
 ## Events
 
--   **On asset deleted**
--   **On asset published**
--   **On asset unpublished**
--   **On entry created**
--   **On entry deleted**
--   **On entry published**
--   **On entry unpublished**
--   **On entry updated**
+### Entries
+
+- **On asset deleted**
+- **On asset published**
+- **On asset unpublished**
+- **On entry created**
+- **On entry deleted**
+- **On entry published**
+- **On entry unpublished**
+- **On entry updated**
 
 
 ## HTML features

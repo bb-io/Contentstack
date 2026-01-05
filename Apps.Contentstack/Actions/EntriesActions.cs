@@ -38,8 +38,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     : AppInvocable(invocationContext)
 {
     [Action("Calculate all entries", Description = "Calculate all entries")]
-    public async Task<CalculateAllEntriesResponse> CalculateAllEntries(
-        [ActionParameter] CalculateEntriesRequest request)
+    public async Task<CalculateAllEntriesResponse> CalculateAllEntries([ActionParameter] CalculateEntriesRequest request)
     {
         var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes(null);
         var entries = new List<EntryEntity>();
@@ -353,8 +352,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     #region HTML conversion
 
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
-    [Action("Get entry content as HTML", Description = "Get content of a specific entry as HTML file")]
-    public async Task<GetEntryAsHtmlResponse> GetEntryAsHtml(
+    [Action("Download entry content", Description = "Download content of a specific entry as HTML file")]
+    public async Task<DownloadEntryResponse> GetEntryAsHtml(
         [ActionParameter] EntryRequest input, 
         [ActionParameter] LocaleRequest locale)
     {
@@ -384,8 +383,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadContent)]
-    [Action("Update entry content from HTML", Description = "Update content of a specific entry from HTML file")]
-    public async Task<UpdateEntryFromHtmlResponse> UpdateEntryFromHtml([ActionParameter] UpdateEntryFromHtmlRequest input)
+    [Action("Upload entry content", Description = "Update content of a specific entry from a file")]
+    public async Task<UploadEntryResponse> UpdateEntryFromHtml([ActionParameter] UploadEntryRequest input)
     {
         using var memoryStream = new MemoryStream();
         var file = await fileManagementClient.DownloadAsync(input.Content);
@@ -423,20 +422,31 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         };
     }
 
-    [Action("Get IDs from HTML", Description = "Extract content type and entry IDs from HTML file")]
-    public GetIdsFromHtmlResponse ExtractContentTypeAndEntryId(
-        [ActionParameter] FileRequest fileRequest)
+    [Action("Get entry file metadata", Description = "Extract content type and entry IDs from a file")]
+    public async Task<GetEntryFileMetadataResponse> ExtractContentTypeAndEntryId([ActionParameter] FileRequest fileRequest)
     {
-        var file = fileManagementClient.DownloadAsync(fileRequest.File).Result;
-        var memoryStream = new MemoryStream();
-        file.CopyTo(memoryStream);
+        using var memoryStream = new MemoryStream();
+        var file = await fileManagementClient.DownloadAsync(fileRequest.Content);
+        var originalBytes = await file.GetByteData();
+
+        var html = Encoding.UTF8.GetString(originalBytes);
+        if (Xliff2Serializer.IsXliff2(html))
+        {
+            var transformedHtml = Transformation.Parse(html, "entry.xlf").Target().Serialize()
+                ?? throw new PluginMisconfigurationException("XLIFF did not contain files");
+
+            await memoryStream.WriteAsync(Encoding.UTF8.GetBytes(transformedHtml));
+        }
+        else
+            await memoryStream.WriteAsync(originalBytes);
+
         memoryStream.Position = 0;
 
         var (contentTypeId, entryId) = HtmlToJsonConverter.ExtractContentTypeAndEntryId(memoryStream);
         return new()
         {
-            ContentTypeId = contentTypeId,
-            EntryId = entryId
+            ContentTypeId = contentTypeId ?? string.Empty,
+            EntryId = entryId ?? string.Empty
         };
     }
 
@@ -444,7 +454,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
     #region Utils
 
-    private List<string> ExtractAssetIdsFromJObject(JObject entryJObject, string? fileExtension)
+    private static List<string> ExtractAssetIdsFromJObject(JObject entryJObject, string? fileExtension)
     {
         var assetIds = new List<string>();
         foreach (var property in entryJObject.Properties())
@@ -542,7 +552,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return response.ContentType;
     }
 
-    private void RemovePropertyByName(JToken token, string propertyName)
+    private static void RemovePropertyByName(JToken token, string propertyName)
     {
         if (token.Type is JTokenType.Property or JTokenType.Array)
         {

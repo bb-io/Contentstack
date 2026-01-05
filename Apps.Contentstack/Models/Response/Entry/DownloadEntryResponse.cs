@@ -3,7 +3,7 @@ using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 
 namespace Apps.Contentstack.Models.Response.Entry;
 
-public record GetEntryAsHtmlResponse(FileReference Content) : IDownloadContentOutput
+public record DownloadEntryResponse(FileReference Content) : IDownloadContentOutput
 {
     public FileReference Content { get; set; } = Content;
 }
