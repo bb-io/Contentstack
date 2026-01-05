@@ -25,7 +25,7 @@ public abstract class ContentstackWebhookHandler : IWebhookEventHandler
             {
                 Webhook = new()
                 {
-                    Name = $"Blackbird-{Event}-{DateTimeOffset.Now}",
+                    Name = $"Blackbird-{Event.Replace("content_types.", "")}-{DateTimeOffset.Now:MM/dd/yyyy HH:mm}",
                     Channels = [Event],
                     Destinations =
                     [
