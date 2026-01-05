@@ -25,6 +25,6 @@ public class EntryDataHandler(InvocationContext invocationContext, string conten
                         x.Title.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.CreatedAt)
             .Take(50)
-            .Select(x => new DataSourceItem(x.Uid, x.Title) );
+            .Select(x => new DataSourceItem(x.ContentId, x.Title) );
     }
 }

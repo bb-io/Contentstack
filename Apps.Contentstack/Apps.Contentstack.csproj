@@ -6,14 +6,15 @@
         <Nullable>enable</Nullable>
         <Product>Contentstack</Product>
         <Description>Headless CMS that enables users to create, manage, and deliver digital content across various platforms and channels</Description>
-        <Version>1.4.25</Version>
+        <Version>1.4.26</Version>
         <AssemblyName>Apps.Contentstack</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Blackbird.Applications.SDK.Blueprints" Version="1.0.0-rc.10308" />
+        <PackageReference Include="Blackbird.Applications.SDK.Blueprints" Version="1.0.1" />
         <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.17" />
-        <PackageReference Include="HtmlAgilityPack" Version="1.11.59" />
+        <PackageReference Include="Blackbird.Filters" Version="1.1.45" />
+        <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,8 +1,8 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 
-namespace Apps.Contentstack.Models.Response;
+namespace Apps.Contentstack.Models.Response.Entry;
 
-public class GetIdsFromHtmlResponse
+public class UploadEntryResponse
 {
     [Display("Content type ID")]
     public string ContentTypeId { get; set; } = string.Empty;

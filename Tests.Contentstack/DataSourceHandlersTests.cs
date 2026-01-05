@@ -1,6 +1,6 @@
-﻿using Apps.Contentstack.DataSourceHandlers;
+﻿using Tests.Contentstack.Base;
+using Apps.Contentstack.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common.Dynamic;
-using OpenAITests.Base;
 
 namespace Tests.Contentstack;
 
@@ -60,7 +60,7 @@ public class DataSourceHandlersTests : TestBase
     [TestMethod]
     public async Task GetDataAsync_EntryTags_ReturnsNonEmptyCollection()
     {
-        var handler = new EntryTagDataSourceHandler(InvocationContext, new Apps.Contentstack.Models.Request.Entry.EntryRequest { EntryId= "bltb0b17fd01c287e55", ContentTypeId= "missions" },
+        var handler = new EntryTagDataSourceHandler(InvocationContext, new Apps.Contentstack.Models.Request.Entry.EntryRequest { ContentId= "bltb0b17fd01c287e55", ContentTypeId= "missions" },
             new Apps.Contentstack.Models.Request.LocaleRequest {  });
         var result = await handler.GetDataAsync(new DataSourceContext { }, CancellationToken.None);
 

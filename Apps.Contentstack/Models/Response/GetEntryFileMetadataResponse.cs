@@ -1,8 +1,8 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 
-namespace Apps.Contentstack.Models.Response.Entry;
+namespace Apps.Contentstack.Models.Response;
 
-public class UpdateEntryFromHtmlResponse
+public class GetEntryFileMetadataResponse
 {
     [Display("Content type ID")]
     public string ContentTypeId { get; set; } = string.Empty;

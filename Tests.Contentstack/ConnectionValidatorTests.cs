@@ -1,6 +1,6 @@
+using Tests.Contentstack.Base;
 using Apps.Contentstack.Connections;
 using Blackbird.Applications.Sdk.Common.Authentication;
-using OpenAITests.Base;
 
 namespace Tests.Contentstack;
 

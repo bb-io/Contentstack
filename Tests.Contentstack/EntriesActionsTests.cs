@@ -1,10 +1,10 @@
-﻿using Apps.Contentstack.Actions;
+﻿using Tests.Contentstack.Base;
+using Apps.Contentstack.Actions;
 using Apps.Contentstack.Models.Request;
 using Apps.Contentstack.Models.Request.ContentType;
 using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Request.Workflow;
 using Blackbird.Applications.Sdk.Common.Files;
-using OpenAITests.Base;
 
 namespace Tests.Contentstack;
 
@@ -18,7 +18,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "missions",
-            EntryId = "bltb0b17fd01c287e55"
+            ContentId = "bltb0b17fd01c287e55"
         };
         var localeRequest = new LocaleRequest { };
         var fileRequest = new FileExtensionRequest { };
@@ -28,7 +28,7 @@ public class EntriesActionsTests : TestBase
         var json = Newtonsoft.Json.JsonConvert.SerializeObject(result);
         Console.WriteLine(json);
 
-        Console.WriteLine(result.Uid);
+        Console.WriteLine(result.ContentId);
         Console.WriteLine(result.Locale);
         Assert.IsNotNull(result);
     }
@@ -40,7 +40,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "repeating_fields",
-            EntryId = "bltda1e0b08782659f5"
+            ContentId = "blt3f4f8182db9676ce"
         };
         var localeRequest = new LocaleRequest
         {
@@ -50,7 +50,7 @@ public class EntriesActionsTests : TestBase
         var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
 
         Assert.IsNotNull(result);
-        Assert.IsNotNull(result.File);
+        Assert.IsNotNull(result.Content);
     }
 
     
@@ -61,7 +61,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "repeating_complex_fields",
-            EntryId = "bltca8323a6a8c3c3c1"
+            ContentId = "bltca8323a6a8c3c3c1"
         };
         var localeRequest = new LocaleRequest
         {
@@ -71,7 +71,7 @@ public class EntriesActionsTests : TestBase
         var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
 
         Assert.IsNotNull(result);
-        Assert.IsNotNull(result.File);
+        Assert.IsNotNull(result.Content);
     }
 
     [TestMethod]
@@ -79,10 +79,10 @@ public class EntriesActionsTests : TestBase
     {
         var action = new EntriesActions(InvocationContext, FileManager);
         var fileReference = new FileReference { Name = "Repeitable onderzoek_en-us.html" };
-        var fileRequest = new FileRequest { File = fileReference };
+        var request = new UploadEntryRequest { Content = fileReference };
 
         // Act
-        var result = await action.UpdateEntryFromHtml(new(), fileRequest, new());
+        var result = await action.UpdateEntryFromHtml(request);
 
         // Assert
         Assert.IsNotNull(result);
@@ -95,10 +95,10 @@ public class EntriesActionsTests : TestBase
     {
         var action = new EntriesActions(InvocationContext, FileManager);
         var fileReference = new FileReference { Name = "Complex entry_en_us.html" };
-        var fileRequest = new FileRequest { File = fileReference };
+        var request = new UploadEntryRequest { Content = fileReference };
 
         // Act
-        var result = await action.UpdateEntryFromHtml(new(), fileRequest, new());
+        var result = await action.UpdateEntryFromHtml(request);
 
         // Assert
         Assert.IsNotNull(result);
@@ -112,7 +112,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "missions",
-            EntryId = "bltb0b17fd01c287e55"
+            ContentId = "bltb0b17fd01c287e55"
         };
         var localeRequest = new LocaleRequest { };
         var fileRequest = new FileExtensionRequest { };
@@ -128,7 +128,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "missions",
-            EntryId = "bltb0b17fd01c287e55"
+            ContentId = "bltb0b17fd01c287e55"
         };
         var localeRequest = new LocaleRequest { };
         var fileRequest = new FileExtensionRequest { };
@@ -150,7 +150,7 @@ public class EntriesActionsTests : TestBase
         var result = await action.SearchEntries(contenteRequest, workflowRequest, localeRequest, tagFilter);
         foreach (var item in result.Entries)
         {
-            Console.WriteLine($"{item.Uid} - {item.Title} - {item.Tags}");
+            Console.WriteLine($"{item.ContentId} - {item.Title} - {item.Tags}");
             Assert.IsNotNull(item);
         }
     }
