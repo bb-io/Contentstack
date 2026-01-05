@@ -40,7 +40,7 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "repeating_fields",
-            ContentId = "bltda1e0b08782659f5"
+            ContentId = "blt3f4f8182db9676ce"
         };
         var localeRequest = new LocaleRequest
         {
@@ -50,7 +50,7 @@ public class EntriesActionsTests : TestBase
         var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
 
         Assert.IsNotNull(result);
-        Assert.IsNotNull(result.File);
+        Assert.IsNotNull(result.Content);
     }
 
     
@@ -71,7 +71,7 @@ public class EntriesActionsTests : TestBase
         var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
 
         Assert.IsNotNull(result);
-        Assert.IsNotNull(result.File);
+        Assert.IsNotNull(result.Content);
     }
 
     [TestMethod]
@@ -79,10 +79,10 @@ public class EntriesActionsTests : TestBase
     {
         var action = new EntriesActions(InvocationContext, FileManager);
         var fileReference = new FileReference { Name = "Repeitable onderzoek_en-us.html" };
-        var fileRequest = new FileRequest { File = fileReference };
+        var request = new UpdateEntryFromHtmlRequest { Content = fileReference };
 
         // Act
-        var result = await action.UpdateEntryFromHtml(new(), fileRequest, new());
+        var result = await action.UpdateEntryFromHtml(request);
 
         // Assert
         Assert.IsNotNull(result);
@@ -95,10 +95,10 @@ public class EntriesActionsTests : TestBase
     {
         var action = new EntriesActions(InvocationContext, FileManager);
         var fileReference = new FileReference { Name = "Complex entry_en_us.html" };
-        var fileRequest = new FileRequest { File = fileReference };
+        var request = new UpdateEntryFromHtmlRequest { Content = fileReference };
 
         // Act
-        var result = await action.UpdateEntryFromHtml(new(), fileRequest, new());
+        var result = await action.UpdateEntryFromHtml(request);
 
         // Assert
         Assert.IsNotNull(result);

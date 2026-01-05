@@ -358,11 +358,17 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] EntryRequest input, 
         [ActionParameter] LocaleRequest locale)
     {
-        var contentType = await GetContentType(input.ContentTypeId);
+        input.Validate();
 
+        var contentType = await GetContentType(input.ContentTypeId);
         var entry = await GetEntryJObject(input.ContentTypeId, input.ContentId, locale.Locale);
-        var html = JsonToHtmlConverter.ToHtml(entry, contentType, InvocationContext.Logger, input.ContentTypeId,
-            input.ContentId);
+        var html = JsonToHtmlConverter.ToHtml(
+            entry, 
+            contentType, 
+            InvocationContext.Logger, 
+            input.ContentTypeId,
+            input.ContentId
+        );
 
         var entryTitle = entry["title"]?.ToString() ?? input.ContentId;
         if (!string.IsNullOrEmpty(locale.Locale)) 
