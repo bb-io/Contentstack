@@ -5,7 +5,7 @@ using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 
 namespace Apps.Contentstack.Webhooks.Models;
 
-public record EntryWebhookResponse(EntryWebhookPayload payload) : IDownloadContentInput
+public class EntryWebhookResponse(EntryWebhookPayload payload) : IDownloadContentInput
 {
     [Display("Entry ID")]
     [JsonProperty("uid")]
