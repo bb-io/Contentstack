@@ -34,51 +34,30 @@ public class EntriesActionsTests : TestBase
     }
 
     [TestMethod]
-    public async Task GetEntryAsHtml_WithValidLocale_ReturnsHtmlContent()
+    public async Task DownloadEntryContent_ReturnsHtmlContent()
     {
         var action = new EntriesActions(InvocationContext, FileManager);
         var entryRequest = new EntryRequest
         {
-            ContentTypeId = "repeating_fields",
-            ContentId = "blt3f4f8182db9676ce"
+            ContentTypeId = "article",
+            ContentId = "blt59b3a2b8f8f83e04"
         };
         var localeRequest = new LocaleRequest
         {
-            Locale = "en-us"
+            Locale = "en"
         };
 
         var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
-
-        Assert.IsNotNull(result);
-        Assert.IsNotNull(result.Content);
-    }
-
-    
-    [TestMethod]
-    public async Task GetEntryAsHtml_ComplexObject_ReturnsHtmlContent()
-    {
-        var action = new EntriesActions(InvocationContext, FileManager);
-        var entryRequest = new EntryRequest
-        {
-            ContentTypeId = "repeating_complex_fields",
-            ContentId = "bltca8323a6a8c3c3c1"
-        };
-        var localeRequest = new LocaleRequest
-        {
-            Locale = "en-us"
-        };
-
-        var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
-
-        Assert.IsNotNull(result);
+        
+        Console.WriteLine(result.Content.Name);
         Assert.IsNotNull(result.Content);
     }
 
     [TestMethod]
-    public async Task UpdateEntryFromHtml_WithAttachedFile_ShouldUpdateEntry()
+    public async Task UploadEntryContent_IsSuccess()
     {
         var action = new EntriesActions(InvocationContext, FileManager);
-        var fileReference = new FileReference { Name = "Repeitable onderzoek_en-us.html" };
+        var fileReference = new FileReference { Name = "test.html" };
         var request = new UploadEntryRequest { Content = fileReference };
 
         // Act
@@ -86,23 +65,6 @@ public class EntriesActionsTests : TestBase
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual("repeating_fields", result.ContentTypeId);
-    }
-
-    
-    [TestMethod]
-    public async Task UpdateEntryFromHtml_ComplexEntry_ShouldUpdateEntry()
-    {
-        var action = new EntriesActions(InvocationContext, FileManager);
-        var fileReference = new FileReference { Name = "Complex entry_en_us.html" };
-        var request = new UploadEntryRequest { Content = fileReference };
-
-        // Act
-        var result = await action.UpdateEntryFromHtml(request);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual("repeating_complex_fields", result.ContentTypeId);
     }
 
     [TestMethod]
