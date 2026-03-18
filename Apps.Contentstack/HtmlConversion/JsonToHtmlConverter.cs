@@ -94,7 +94,20 @@ public static class JsonToHtmlConverter
                 JsonRichTextToHtml(doc, parentNode, property as JObject, max);
                 break;
             case "blocks":
-                BlocksToHtml(doc, parentNode, property as JArray, entryProperty);
+                if (property is JArray jArray)
+                    BlocksToHtml(doc, parentNode, jArray, entryProperty);
+                else if (property is JObject jObject)
+                {
+                    var block = jObject.First as JProperty;
+                    if (block != null && entryProperty.Blocks != null)
+                    {
+                        var blockName = block.Name;
+                        var blockContentType = entryProperty.Blocks.FirstOrDefault(b => b.Uid == blockName);
+
+                        if (blockContentType != null)
+                            ParseEntryToHtml((block.Value as JObject)!, blockContentType, doc, parentNode);
+                    }
+                }
                 break;
             case "global_field":
                 GlobalFieldToHtml(doc, parentNode, property as JObject, entryProperty, max);
