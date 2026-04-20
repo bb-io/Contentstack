@@ -1,4 +1,5 @@
 using Apps.Contentstack.Api;
+using Apps.Contentstack.Constants;
 using Apps.Contentstack.DataSourceHandlers;
 using Apps.Contentstack.HtmlConversion;
 using Apps.Contentstack.Invocables;
@@ -19,15 +20,20 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
+using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
 using Blackbird.Applications.Sdk.Utils.Extensions.String;
 using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Filters.Constants;
+using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
+using Blackbird.Filters.Xliff.Xliff1;
 using Blackbird.Filters.Xliff.Xliff2;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
 using System.Globalization;
+using System.Net;
 using System.Net.Mime;
 using System.Text;
 
@@ -361,12 +367,27 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
         var contentType = await GetContentType(input.ContentTypeId);
         var entry = await GetEntryJObject(input.ContentTypeId, input.ContentId, locale.Locale);
+
+        var updatedByUserId = entry["updated_by"]?.ToString();
+        UserEntity? updatedByUser = null;
+
+        if (updatedByUserId != null)
+        {
+            var userRequest = new ContentstackRequest($"v3/stacks/users/", Method.Get, Creds);
+            var allUsers = await Client.ExecuteWithErrorHandling<UsersResponse>(userRequest);
+            updatedByUser = allUsers.Users.Find(x => x.Id == updatedByUserId);
+        }
+        
+
+        Console.WriteLine(entry.ToString());
         var html = JsonToHtmlConverter.ToHtml(
             entry, 
             contentType, 
             InvocationContext.Logger, 
             input.ContentTypeId,
-            input.ContentId
+            input.ContentId,
+            Creds.Get(CredsNames.StackApiKey).Value,
+            updatedByUser
         );
 
         var entryTitle = entry["title"]?.ToString() ?? input.ContentId;
@@ -391,9 +412,11 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var originalBytes = await file.GetByteData(); 
 
         var html = Encoding.UTF8.GetString(originalBytes);
-        if (Xliff2Serializer.IsXliff2(html))
+        Transformation? transformation = null;
+        if (Xliff2Serializer.IsXliff2(html) || Xliff1Serializer.IsXliff1(html))
         {
-            var transformedHtml = Transformation.Parse(html, "entry.xlf").Target().Serialize()
+            transformation = Transformation.Parse(html, input.Content.Name);
+            var transformedHtml = transformation.Target().Serialize()
                 ?? throw new PluginMisconfigurationException("XLIFF did not contain files");
 
             await memoryStream.WriteAsync(Encoding.UTF8.GetBytes(transformedHtml));
@@ -415,11 +438,34 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
         await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
-        return new()
+        var result = new UploadEntryResponse
         {
             ContentTypeId = contentTypeId,
             EntryId = entryId
         };
+
+        if (transformation is not null)
+        {
+            var updatedEntry = await GetEntry(
+                new EntryRequest { ContentId = entryId, ContentTypeId = contentTypeId }, 
+                new LocaleRequest { Locale = input.Locale},
+                new ());
+            var stackApiKey = Creds.Get(CredsNames.StackApiKey).Value;
+            transformation.TargetSystemReference.ContentId = entryId;
+            transformation.TargetSystemReference.ContentName = updatedEntry.Title;
+            transformation.TargetSystemReference.AdminUrl = $"https://app.contentstack.com/#!/stack/{stackApiKey}/content-type/{contentTypeId}/{input.Locale}/entry/{entryId}/edit";
+            transformation.TargetSystemReference.SystemName = "Contentstack";
+            transformation.TargetSystemReference.SystemRef = "https://www.contentstack.com";
+            transformation.TargetLanguage = input.Locale;
+
+            result.Content = await fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
+        }
+        else
+        {
+            result.Content = input.Content;
+        }
+
+        return result;
     }
 
     [Action("Get entry file metadata", Description = "Extract content type and entry IDs from a file")]
