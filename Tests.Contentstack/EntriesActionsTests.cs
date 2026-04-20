@@ -17,8 +17,8 @@ public class EntriesActionsTests : TestBase
         var action = new EntriesActions(InvocationContext, FileManager);
         var entryRequest = new EntryRequest
         {
-            ContentTypeId = "missions",
-            ContentId = "bltb0b17fd01c287e55"
+            ContentTypeId = "page",
+            ContentId = "blt3722af2e4979b90a"
         };
         var localeRequest = new LocaleRequest { };
         var fileRequest = new FileExtensionRequest { };
@@ -39,12 +39,12 @@ public class EntriesActionsTests : TestBase
         var action = new EntriesActions(InvocationContext, FileManager);
         var entryRequest = new EntryRequest
         {
-            ContentTypeId = "article",
-            ContentId = "blt59b3a2b8f8f83e04"
+            ContentTypeId = "page",
+            ContentId = "blt3722af2e4979b90a"
         };
         var localeRequest = new LocaleRequest
         {
-            Locale = "en"
+            //Locale = "en"
         };
 
         var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
@@ -104,10 +104,10 @@ public class EntriesActionsTests : TestBase
     public async Task SearchEntries_WithValidFilters_ReturnsMatchingEntries()
     {
         var action = new EntriesActions(InvocationContext, FileManager);
-        var contenteRequest = new ContentTypeRequest { ContentTypeId = "missions", };
+        var contenteRequest = new ContentTypeRequest { ContentTypeId = "page", };
         var localeRequest = new LocaleRequest { };
         var workflowRequest = new WorkflowStageFilterRequest { };
-        var tagFilter = new TagFilterRequest { Tag = "insights explore toolkit1" };
+        var tagFilter = new TagFilterRequest { /*Tag = "insights explore toolkit1"*/ };
 
         var result = await action.SearchEntries(contenteRequest, workflowRequest, localeRequest, tagFilter);
         foreach (var item in result.Entries)
