@@ -37,7 +37,7 @@ public class EntriesActionsTests : TestBase
     public async Task DownloadEntryContent_ReturnsHtmlContent()
     {
         var action = new EntriesActions(InvocationContext, FileManager);
-        var entryRequest = new EntryRequest
+        var entryRequest = new DownloadEntryRequest
         {
             ContentTypeId = "page",
             ContentId = "blt3722af2e4979b90a"
@@ -108,8 +108,9 @@ public class EntriesActionsTests : TestBase
         var localeRequest = new LocaleRequest { };
         var workflowRequest = new WorkflowStageFilterRequest { };
         var tagFilter = new TagFilterRequest { /*Tag = "insights explore toolkit1"*/ };
+        var updatedAtFilter = new UpdatedAtFilterRequest { };
 
-        var result = await action.SearchEntries(contenteRequest, workflowRequest, localeRequest, tagFilter);
+        var result = await action.SearchEntries(contenteRequest, workflowRequest, localeRequest, tagFilter, updatedAtFilter);
         foreach (var item in result.Entries)
         {
             Console.WriteLine($"{item.ContentId} - {item.Title} - {item.Tags}");

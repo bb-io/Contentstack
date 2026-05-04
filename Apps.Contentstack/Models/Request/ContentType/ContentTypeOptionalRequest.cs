@@ -10,5 +10,9 @@ public class ContentTypeOptionalRequest
     [DataSource(typeof(ContentTypeDataHandler))]
     public string? ContentTypeId { get; set; }
 
+    [Display("Locale")]
+    [DataSource(typeof(LanguageDataHandler))]
+    public string? Locale { get; set; }
+
     public string? Tag { get; set; }
 }

@@ -60,7 +60,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             var result = await SearchEntries(new()
             {
                 ContentTypeId = contentType.Uid
-            }, new(), new(),new());
+            }, new(), new(), new(), new());
 
             bool isWorkflowStageFilterProvided = request.WorkflowStages != null && request.WorkflowStages.Any();
             if (isWorkflowStageFilterProvided)
@@ -87,7 +87,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] ContentTypeRequest contentType,
         [ActionParameter] WorkflowStageFilterRequest workflowFilter,
         [ActionParameter] LocaleRequest locale,
-        [ActionParameter] TagFilterRequest tagFilter)
+        [ActionParameter] TagFilterRequest tagFilter,
+        [ActionParameter] UpdatedAtFilterRequest updatedAtFilter)
     {
         var endpoint = $"v3/content_types/{contentType.ContentTypeId}/entries"
             .SetQueryParameter("include_workflow", "true");
@@ -104,6 +105,16 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         if (!string.IsNullOrWhiteSpace(tagFilter.Tag))
         {
             entries = entries.Where(x => x.Tags != null && x.Tags.Any(t => t.Equals(tagFilter.Tag, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        if (updatedAtFilter.UpdatedAfter.HasValue)
+        {
+            entries = entries.Where(x => x.UpdatedAt >= updatedAtFilter.UpdatedAfter.Value);
+        }
+
+        if (updatedAtFilter.UpdatedBefore.HasValue)
+        {
+            entries = entries.Where(x => x.UpdatedAt <= updatedAtFilter.UpdatedBefore.Value);
         }
 
         var filteredEntries = entries.ToArray();
@@ -360,7 +371,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
     [Action("Download entry content", Description = "Download content of a specific entry as HTML file")]
     public async Task<DownloadEntryResponse> GetEntryAsHtml(
-        [ActionParameter] EntryRequest input, 
+        [ActionParameter] DownloadEntryRequest input, 
         [ActionParameter] LocaleRequest locale)
     {
         input.Validate();
@@ -387,7 +398,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             input.ContentTypeId,
             input.ContentId,
             Creds.Get(CredsNames.StackApiKey).Value,
-            updatedByUser
+            updatedByUser,
+            input.ExcludeFieldIds
         );
 
         var entryTitle = entry["title"]?.ToString() ?? input.ContentId;

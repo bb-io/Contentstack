@@ -20,6 +20,10 @@ public class EntryEntity : IDownloadContentInput
     [Display("Created at")]
     public DateTime CreatedAt { get; set; }
 
+    [Display("Updated at")]
+    [JsonProperty("updated_at")]
+    public DateTime UpdatedAt { get; set; }
+
     [DefinitionIgnore, JsonProperty("_version")]
     public int Version { get; set; }
     
