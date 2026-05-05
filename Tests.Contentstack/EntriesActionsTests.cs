@@ -40,7 +40,8 @@ public class EntriesActionsTests : TestBase
         var entryRequest = new DownloadEntryRequest
         {
             ContentTypeId = "page",
-            ContentId = "blt3722af2e4979b90a"
+            ContentId = "blt3722af2e4979b90a",
+            IncludeReferencedEntryUids = true
         };
         var localeRequest = new LocaleRequest
         {
@@ -50,6 +51,7 @@ public class EntriesActionsTests : TestBase
         var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
         
         Console.WriteLine(result.Content.Name);
+        Console.WriteLine(string.Join(", ", result.ReferencedEntryUids ?? []));
         Assert.IsNotNull(result.Content);
     }
 

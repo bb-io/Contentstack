@@ -3,6 +3,7 @@ using Apps.Contentstack.Constants;
 using Apps.Contentstack.DataSourceHandlers;
 using Apps.Contentstack.HtmlConversion;
 using Apps.Contentstack.Invocables;
+using Apps.Contentstack.Models;
 using Apps.Contentstack.Models.Entities;
 using Apps.Contentstack.Models.Request;
 using Apps.Contentstack.Models.Request.ContentType;
@@ -412,7 +413,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             $"{entryTitle}.html"
         );
 
-        return new(file);
+        var response = new DownloadEntryResponse(file);
+
+        if (input.IncludeReferencedEntryUids)
+        {
+            response.ReferencedEntryUids = ExtractReferencedEntryUids(entry, contentType);
+        }
+
+        return response;
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadContent)]
@@ -533,6 +541,106 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         }
 
         return assetIds;
+    }
+
+    private static List<string> ExtractReferencedEntryUids(JObject entry, ContentTypeBlockEntity contentType)
+    {
+        var referencedEntryUids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        ExtractReferencedEntryUidsFromSchema(entry, contentType.Schema, referencedEntryUids);
+        return referencedEntryUids.ToList();
+    }
+
+    private static void ExtractReferencedEntryUidsFromSchema(JObject entry, JArray schema, ISet<string> referencedEntryUids)
+    {
+        foreach (var schemaToken in schema.OfType<JObject>())
+        {
+            var field = schemaToken.ToObject<EntryProperty>();
+            var fieldUid = schemaToken["uid"]?.ToString();
+
+            if (field is null || string.IsNullOrWhiteSpace(fieldUid))
+                continue;
+
+            field.Uid = fieldUid;
+            var property = entry[fieldUid];
+            if (property is null)
+                continue;
+
+            ExtractReferencedEntryUidsFromProperty(property, field, referencedEntryUids);
+        }
+    }
+
+    private static void ExtractReferencedEntryUidsFromProperty(JToken property, EntryProperty field, ISet<string> referencedEntryUids)
+    {
+        switch (field.DataType)
+        {
+            case "reference":
+                AddReferenceUids(property, referencedEntryUids);
+                break;
+            case "group":
+            case "global_field":
+                if (field.Schema is null)
+                    break;
+
+                if (property is JObject propertyObject)
+                {
+                    ExtractReferencedEntryUidsFromSchema(propertyObject, field.Schema, referencedEntryUids);
+                }
+                else if (property is JArray propertyArray)
+                {
+                    foreach (var item in propertyArray.OfType<JObject>())
+                    {
+                        ExtractReferencedEntryUidsFromSchema(item, field.Schema, referencedEntryUids);
+                    }
+                }
+                break;
+            case "blocks":
+                if (field.Blocks is null || property is not JArray blocksArray)
+                    break;
+
+                foreach (var blockItem in blocksArray.OfType<JObject>())
+                {
+                    var blockProperty = blockItem.Properties().FirstOrDefault();
+                    if (blockProperty?.Value is not JObject blockValue)
+                        continue;
+
+                    var blockSchema = field.Blocks.FirstOrDefault(x => x.Uid == blockProperty.Name)?.Schema;
+                    if (blockSchema is not null)
+                    {
+                        ExtractReferencedEntryUidsFromSchema(blockValue, blockSchema, referencedEntryUids);
+                    }
+                }
+                break;
+        }
+    }
+
+    private static void AddReferenceUids(JToken property, ISet<string> referencedEntryUids)
+    {
+        if (property is JArray propertyArray)
+        {
+            foreach (var item in propertyArray)
+            {
+                AddReferenceUid(item, referencedEntryUids);
+            }
+
+            return;
+        }
+
+        AddReferenceUid(property, referencedEntryUids);
+    }
+
+    private static void AddReferenceUid(JToken referenceToken, ISet<string> referencedEntryUids)
+    {
+        var uid = referenceToken.Type switch
+        {
+            JTokenType.String => referenceToken.ToString(),
+            JTokenType.Object => referenceToken["uid"]?.ToString() ?? referenceToken["entry_uid"]?.ToString(),
+            _ => null
+        };
+
+        if (!string.IsNullOrWhiteSpace(uid))
+        {
+            referencedEntryUids.Add(uid);
+        }
     }
 
     private async Task SetEntryProperty<T>(string contentTypeId, string entryId, string property, T value,
