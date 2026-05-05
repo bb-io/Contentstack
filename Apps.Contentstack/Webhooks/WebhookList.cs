@@ -70,6 +70,16 @@ public class WebhookList
             }
         }
 
+        if (!string.IsNullOrEmpty(contentTypeRequest.Locale) &&
+            !string.Equals(contentTypeRequest.Locale, result.Data.Entry.Locale, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
+            {
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            });
+        }
+
         return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
         {
             HttpResponseMessage = null,

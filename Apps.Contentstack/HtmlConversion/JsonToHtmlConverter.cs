@@ -13,12 +13,16 @@ namespace Apps.Contentstack.HtmlConversion;
 public static class JsonToHtmlConverter
 {
     public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType, Logger? logger, string contentTypeId,
-        string entryId, string stackApiKey, UserEntity? updatedByUser)
+        string entryId, string stackApiKey, UserEntity? updatedByUser, IEnumerable<string>? excludedFieldIds = null)
     {
         try
         {
             var (doc, body) = PrepareEmptyHtmlDocument(contentTypeId, entryId, entry, stackApiKey, updatedByUser);
-            ParseEntryToHtml(entryId, entry, contentType, doc, body);
+            var excludedFields = excludedFieldIds?
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+            ParseEntryToHtml(entryId, entry, contentType, doc, body, excludedFields);
 
             return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
         }
@@ -32,10 +36,13 @@ public static class JsonToHtmlConverter
     }
 
     private static void ParseEntryToHtml(string entryId, JObject entry, ContentTypeBlockEntity contentType, HtmlDocument doc,
-        HtmlNode body)
+        HtmlNode body, ISet<string> excludedFieldIds)
     {
         contentType.Schema.GetLocalizableFields().ForEach(x =>
         {
+        if (excludedFieldIds.Contains(x.Uid))
+            return;
+
         var property = entry[x.Uid];
 
         if (property is null)
@@ -72,7 +79,7 @@ public static class JsonToHtmlConverter
                     else
                     {
                         itemContainer.SetAttributeValue("class", ConversionConstants.MultipleComplexItemClass);
-                        ProcessPropertyByType(entryId, item, x, doc, itemContainer, max);
+                        ProcessPropertyByType(entryId, item, x, doc, itemContainer, excludedFieldIds, max);
                     }
                     
                     containerNode.AppendChild(itemContainer);
@@ -82,12 +89,12 @@ public static class JsonToHtmlConverter
                 return;
             }
             
-            ProcessPropertyByType(entryId, property, x, doc, body, max);
+            ProcessPropertyByType(entryId, property, x, doc, body, excludedFieldIds, max);
         });
     }
     
     private static void ProcessPropertyByType(string entryId, JToken property, EntryProperty entryProperty, HtmlDocument doc, 
-        HtmlNode parentNode, int? max = null)
+        HtmlNode parentNode, ISet<string> excludedFieldIds, int? max = null)
     {
         if (property == null)
             return;
@@ -99,7 +106,7 @@ public static class JsonToHtmlConverter
                 break;
             case "blocks":
                 if (property is JArray jArray)
-                    BlocksToHtml(entryId, doc, parentNode, jArray, entryProperty);
+                    BlocksToHtml(entryId, doc, parentNode, jArray, entryProperty, excludedFieldIds);
                 else if (property is JObject jObject)
                 {
                     var block = jObject.First as JProperty;
@@ -109,12 +116,12 @@ public static class JsonToHtmlConverter
                         var blockContentType = entryProperty.Blocks.FirstOrDefault(b => b.Uid == blockName);
 
                         if (blockContentType != null)
-                            ParseEntryToHtml(entryId, (block.Value as JObject)!, blockContentType, doc, parentNode);
+                            ParseEntryToHtml(entryId, (block.Value as JObject)!, blockContentType, doc, parentNode, excludedFieldIds);
                     }
                 }
                 break;
             case "global_field":
-                GlobalFieldToHtml(entryId, doc, parentNode, property as JObject, entryProperty, max);
+                GlobalFieldToHtml(entryId, doc, parentNode, property as JObject, entryProperty, excludedFieldIds, max);
                 break;
             case "link":
                 LinkToHtml(entryId, doc, parentNode, property as JObject, entryProperty, max);
@@ -123,7 +130,7 @@ public static class JsonToHtmlConverter
                 CommentsToHtml(entryId, doc, parentNode, property as JObject, entryProperty, max);
                 break;
             case "group":
-                GroupToHtml(entryId, doc, parentNode, property as JObject, entryProperty, max);
+                GroupToHtml(entryId, doc, parentNode, property as JObject, entryProperty, excludedFieldIds, max);
                 break;
             default:
                 if (property.Type == JTokenType.String)
@@ -155,7 +162,8 @@ public static class JsonToHtmlConverter
         }
     }
 
-    private static void BlocksToHtml(string entryId, HtmlDocument doc, HtmlNode body, JArray? blocks, EntryProperty entryProperty)
+    private static void BlocksToHtml(string entryId, HtmlDocument doc, HtmlNode body, JArray? blocks, EntryProperty entryProperty,
+        ISet<string> excludedFieldIds)
     {
         if (entryProperty.Blocks is null || blocks is null)
             return;
@@ -166,7 +174,7 @@ public static class JsonToHtmlConverter
             var blockName = block!.Name;
 
             var contentType = entryProperty.Blocks.First(x => x.Uid == blockName);
-            ParseEntryToHtml(entryId, (block.Value as JObject)!, contentType, doc, body);
+            ParseEntryToHtml(entryId, (block.Value as JObject)!, contentType, doc, body, excludedFieldIds);
         });
     }
 
@@ -186,7 +194,8 @@ public static class JsonToHtmlConverter
         body.AppendChild(richTextNode);
     }
 
-    private static void GlobalFieldToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty, int? max = null)
+    private static void GlobalFieldToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty,
+        ISet<string> excludedFieldIds, int? max = null)
     {
         if (property is null || entryProperty.Schema is null)
             return;
@@ -194,7 +203,7 @@ public static class JsonToHtmlConverter
         ParseEntryToHtml(entryId, property, new()
         {
             Schema = entryProperty.Schema
-        }, doc, body);
+        }, doc, body, excludedFieldIds);
     }
 
     private static void LinkToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty, int? max = null)
@@ -288,7 +297,8 @@ public static class JsonToHtmlConverter
         LinkToHtml(entryId, doc, body, property["call_to_action"] as JObject, entryProperty, max);
     }
 
-    private static void GroupToHtml(string entryId, HtmlDocument doc, HtmlNode parentNode, JObject? groupProperty, EntryProperty entryProperty, int? max = null)
+    private static void GroupToHtml(string entryId, HtmlDocument doc, HtmlNode parentNode, JObject? groupProperty, EntryProperty entryProperty,
+        ISet<string> excludedFieldIds, int? max = null)
     {
         if (groupProperty is null || entryProperty.Schema is null)
             return;
@@ -310,6 +320,9 @@ public static class JsonToHtmlConverter
             // Skip metadata and other special properties
             if (property.Name.StartsWith("_"))
                 continue;
+
+            if (excludedFieldIds.Contains(property.Name))
+                continue;
                 
             // Find the schema for this property
             var propertySchema = entryProperty.Schema.FirstOrDefault(s => s["uid"]?.ToString() == property.Name);
@@ -323,7 +336,7 @@ public static class JsonToHtmlConverter
                 };
                 
                 // Process the nested property
-                ProcessPropertyByType(entryId, property.Value, nestedProperty, doc, groupContainer);
+                ProcessPropertyByType(entryId, property.Value, nestedProperty, doc, groupContainer, excludedFieldIds);
             }
             else
             {

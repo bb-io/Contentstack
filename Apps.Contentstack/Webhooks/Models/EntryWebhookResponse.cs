@@ -11,6 +11,9 @@ public class EntryWebhookResponse(EntryWebhookPayload payload) : IDownloadConten
     [JsonProperty("uid")]
     public string ContentId { get; set; } = payload.Entry.Uid;
 
+    [Display("Locale")]
+    public string Locale { get; set; } = payload.Entry.Locale;
+
     [Display("Entry title")]
     public string EntryTitle { get; set; } = payload.Entry.Title;
 
