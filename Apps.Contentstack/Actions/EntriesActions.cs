@@ -91,12 +91,16 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] TagFilterRequest tagFilter,
         [ActionParameter] UpdatedAtFilterRequest updatedAtFilter)
     {
-        if (searchRequest.ContentTypeIds == null || !searchRequest.ContentTypeIds.Any())
-            throw new PluginMisconfigurationException("'Content types' input is required.");
+        var contentTypeIds = searchRequest.ContentTypeIds?.ToArray();
+        if (contentTypeIds == null || contentTypeIds.Length == 0)
+        {
+            var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes(null);
+            contentTypeIds = contentTypes.Items.Select(x => x.Uid).ToArray();
+        }
 
         var allEntries = new List<EntryEntity>();
 
-        foreach (var contentTypeId in searchRequest.ContentTypeIds)
+        foreach (var contentTypeId in contentTypeIds)
         {
             var endpoint = $"v3/content_types/{contentTypeId}/entries"
                 .SetQueryParameter("include_workflow", "true");
