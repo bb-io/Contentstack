@@ -60,7 +60,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
             var result = await SearchEntries(new()
             {
-                ContentTypeId = contentType.Uid
+                ContentTypeIds = new[] { contentType.Uid }
             }, new(), new(), new(), new());
 
             bool isWorkflowStageFilterProvided = request.WorkflowStages != null && request.WorkflowStages.Any();
@@ -85,22 +85,35 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     [BlueprintActionDefinition(BlueprintAction.SearchContent)]
     [Action("Search entries", Description = "Search for entries based on the provided filters")]
     public async Task<ListEntriesResponse> SearchEntries(
-        [ActionParameter] ContentTypeRequest contentType,
+        [ActionParameter] SearchEntriesRequest searchRequest,
         [ActionParameter] WorkflowStageFilterRequest workflowFilter,
         [ActionParameter] LocaleRequest locale,
         [ActionParameter] TagFilterRequest tagFilter,
         [ActionParameter] UpdatedAtFilterRequest updatedAtFilter)
     {
-        var endpoint = $"v3/content_types/{contentType.ContentTypeId}/entries"
-            .SetQueryParameter("include_workflow", "true");
+        var contentTypeIds = searchRequest.ContentTypeIds?.ToArray();
+        if (contentTypeIds == null || contentTypeIds.Length == 0)
+        {
+            var contentTypes = await new ContentTypesActions(InvocationContext).ListContentTypes(null);
+            contentTypeIds = contentTypes.Items.Select(x => x.Uid).ToArray();
+        }
 
-        if (!string.IsNullOrWhiteSpace(locale.Locale))
-            endpoint = endpoint.SetQueryParameter("locale", locale.Locale);
+        var allEntries = new List<EntryEntity>();
 
-        var request = new ContentstackRequest(endpoint, Method.Get, Creds);
-        var result = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);
+        foreach (var contentTypeId in contentTypeIds)
+        {
+            var endpoint = $"v3/content_types/{contentTypeId}/entries"
+                .SetQueryParameter("include_workflow", "true");
 
-        var entries = result.Entries
+            if (!string.IsNullOrWhiteSpace(locale.Locale))
+                endpoint = endpoint.SetQueryParameter("locale", locale.Locale);
+
+            var request = new ContentstackRequest(endpoint, Method.Get, Creds);
+            var result = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);
+            allEntries.AddRange(result.Entries);
+        }
+
+        var entries = allEntries
             .Where(x => workflowFilter.WorkflowStageId is null || x.Workflow?.Uid == workflowFilter.WorkflowStageId);
 
         if (!string.IsNullOrWhiteSpace(tagFilter.Tag))
