@@ -34,4 +34,7 @@ public class EntryWebhookResponse(EntryWebhookPayload payload) : IDownloadConten
 
     [Display("Content type created at")]
     public DateTime ContentTypeCreatedAt { get; set; } = payload.ContentType.CreatedAt;
+
+    [Display("Updated by user ID")]
+    public string? UpdatedByUserId { get; set; } = payload.Entry.UpdatedBy;
 }

@@ -140,6 +140,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         };
     }
 
+    [Action("Get entry locales", Description = "Get all locales that an entry exists in")]
+    public async Task<GetEntryLocalesResponse> GetEntryLocales([ActionParameter] EntryRequest input)
+    {
+        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.ContentId}/locales";
+        var request = new ContentstackRequest(endpoint, Method.Get, Creds);
+        return await Client.ExecuteWithErrorHandling<GetEntryLocalesResponse>(request);
+    }
+
     [Action("Get entry", Description = "Get details of a specific entry")]
     public async Task<SingleEntryEntity> GetEntry(
         [ActionParameter] EntryRequest input,
