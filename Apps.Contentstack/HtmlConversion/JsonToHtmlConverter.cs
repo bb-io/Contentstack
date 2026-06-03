@@ -3,6 +3,7 @@ using Apps.Contentstack.Extensions;
 using Apps.Contentstack.HtmlConversion.Constants;
 using Apps.Contentstack.Models;
 using Apps.Contentstack.Models.Entities;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Filters.Shared;
 using HtmlAgilityPack;
@@ -31,7 +32,7 @@ public static class JsonToHtmlConverter
             logger?.LogError.Invoke(
                 $"Conversion to HTML failed. Entry json: {entry}; Content type schema: {contentType.Schema}; Exception: {ex}",
                 null);
-            throw new("Conversion to HTML failed.");
+            throw new PluginApplicationException("Conversion to HTML failed.");
         }
     }
 

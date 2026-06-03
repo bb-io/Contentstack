@@ -2,6 +2,7 @@ using Apps.Contentstack.Api;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Response.Entry;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 
@@ -15,7 +16,7 @@ public class EntryDataHandler(InvocationContext invocationContext, string conten
     public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(ContentTypeId))
-            throw new("You have to input Content type first");
+            throw new PluginMisconfigurationException("You have to input Content type first");
 
         var request = new ContentstackRequest($"v3/content_types/{ContentTypeId}/entries", Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);

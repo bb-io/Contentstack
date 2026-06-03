@@ -3,6 +3,7 @@ using Apps.Contentstack.Constants;
 using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models.Response.ContentType;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -24,10 +25,10 @@ public abstract class EntryPropDataHandler(InvocationContext invocationContext, 
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(ContentTypeId))
-            throw new("You have to input Content type first");
+            throw new PluginMisconfigurationException("You have to input Content type first");
 
         if (string.IsNullOrWhiteSpace(EntryId))
-            throw new("You have to input Entry first");
+            throw new PluginMisconfigurationException("You have to input Entry first");
 
         var request = new ContentstackRequest($"v3/content_types/{ContentTypeId}", Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling<ContentTypeResponse>(request);
