@@ -1,5 +1,6 @@
 using System.Web;
 using Apps.Contentstack.HtmlConversion.Constants;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
@@ -82,7 +83,7 @@ public static class HtmlToJsonConverter
         catch(Exception ex)
         {
             logger?.LogError.Invoke($"Conversion to Contentstack JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}; Exception: {ex}", null);
-            throw new("The HTML file structure should match the source article");
+            throw new PluginMisconfigurationException("The HTML file structure should match the source article");
         }
     }
 

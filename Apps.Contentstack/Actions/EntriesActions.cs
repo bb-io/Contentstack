@@ -703,7 +703,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 throw new PluginApplicationException(ex.Message);
             }
 
-            throw new(
+            throw new PluginApplicationException(
                 $"Entry update failed. Exception: {ex}; Exception type: {ex.GetType().Name}; Content type schema: {contentTypeObj.Schema}; Entry JSON: {entryObject};");
         }
     }
