@@ -414,12 +414,12 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
         Console.WriteLine(entry.ToString());
 
-        IEnumerable<(string ContentTypeId, string EntryId, JObject Entry, ContentTypeBlockEntity Schema)>? referencedData = null;
+        IEnumerable<ReferencedEntryData>? referencedData = null;
 
         if (input.IncludeReferencedEntryContent)
         {
             var referenced = ExtractReferencedEntriesWithContentTypes(entry, contentType);
-            var list = new List<(string, string, JObject, ContentTypeBlockEntity)>();
+            var list = new List<ReferencedEntryData>();
 
             foreach (var (refEntryUid, refContentTypeUid) in referenced)
             {
@@ -427,7 +427,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 {
                     var refSchema = await GetContentType(refContentTypeUid);
                     var refEntry = await GetEntryJObject(refContentTypeUid, refEntryUid, locale.Locale);
-                    list.Add((refContentTypeUid, refEntryUid, refEntry, refSchema));
+                    list.Add(new ReferencedEntryData(refContentTypeUid, refEntryUid, refEntry, refSchema));
                 }
                 catch
                 {

@@ -22,7 +22,7 @@ public static class JsonToHtmlConverter
         string stackApiKey,
         UserEntity? updatedByUser,
         IEnumerable<string>? excludedFieldIds = null,
-        IEnumerable<(string ContentTypeId, string EntryId, JObject Entry, ContentTypeBlockEntity Schema)>? referencedEntries = null)
+        IEnumerable<ReferencedEntryData>? referencedEntries = null)
     {
         try
         {
@@ -35,12 +35,12 @@ public static class JsonToHtmlConverter
 
             if (referencedEntries != null)
             {
-                foreach (var (refCtId, refEntryId, refEntry, refSchema) in referencedEntries)
+                foreach (var refData in referencedEntries)
                 {
                     var articleNode = doc.CreateElement("article");
-                    articleNode.SetAttributeValue(ConversionConstants.RefContentTypeAttr, refCtId);
-                    articleNode.SetAttributeValue(ConversionConstants.RefEntryIdAttr, refEntryId);
-                    ParseEntryToHtml(refEntryId, refEntry, refSchema, doc, articleNode, excludedFields);
+                    articleNode.SetAttributeValue(ConversionConstants.RefContentTypeAttr, refData.ContentTypeId);
+                    articleNode.SetAttributeValue(ConversionConstants.RefEntryIdAttr, refData.EntryId);
+                    ParseEntryToHtml(refData.EntryId, refData.Entry, refData.Schema, doc, articleNode, excludedFields);
                     body.AppendChild(articleNode);
                 }
             }
