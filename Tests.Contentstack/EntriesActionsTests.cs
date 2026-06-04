@@ -103,6 +103,24 @@ public class EntriesActionsTests : TestBase
     }
 
     [TestMethod]
+    public async Task GetEntryLocales_WithValidEntry_ReturnsLocaleList()
+    {
+        var action = new EntriesActions(InvocationContext, FileManager);
+        var entryRequest = new EntryRequest
+        {
+            ContentTypeId = "test-123",
+            ContentId = "blt06567cfc9ee0a966"
+        };
+
+        var result = await action.GetEntryLocales(entryRequest);
+
+        PrintResult(result);
+        Assert.IsNotNull(result);
+        Assert.IsNotNull(result.Locales);
+        Assert.IsTrue(result.Locales.Any());
+    }
+
+    [TestMethod]
     public async Task SearchEntries_WithValidFilters_ReturnsMatchingEntries()
     {
         var action = new EntriesActions(InvocationContext, FileManager);

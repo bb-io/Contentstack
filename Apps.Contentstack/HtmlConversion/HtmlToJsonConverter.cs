@@ -19,72 +19,109 @@ public static class HtmlToJsonConverter
 
         try
         {
-            // First handle simple repeatable fields
-            var repeatableNodes = doc.DocumentNode.Descendants()
-                .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null && 
-                       x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']") != null &&
-                       x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']").Count > 0)
-                .ToList();
-
-            foreach (var node in repeatableNodes)
-            {
-                var path = node.Attributes[ConversionConstants.PathAttr].Value!;
-                var arrayToken = entry.SelectToken(path) as JArray;
-                
-                if (arrayToken == null)
-                {
-                    logger?.LogWarning.Invoke($"Path {path} not found or is not an array in the entry", null);
-                    continue;
-                }
-
-                var multipleItems = node.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']").ToList();
-                
-                // Make sure we have the right number of items
-                if (multipleItems.Count != arrayToken.Count)
-                {
-                    logger?.LogWarning.Invoke($"Mismatch in array lengths for path {path}. HTML has {multipleItems.Count} items, JSON has {arrayToken.Count} items", null);
-                }
-
-                // Update each item in the array
-                for (int i = 0; i < Math.Min(multipleItems.Count, arrayToken.Count); i++)
-                {
-                    var itemValue = HttpUtility.HtmlDecode(multipleItems[i].InnerHtml.Trim());
-                    if (arrayToken[i] is JValue jValue)
-                    {
-                        jValue.Value = itemValue;
-                    }
-                    else
-                    {
-                        arrayToken[i] = itemValue;
-                    }
-                }
-            }
-
-            // Then handle all direct path mappings (including complex objects)
-            var localizableNodes = doc.DocumentNode.Descendants()
-                .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
-                .ToList();
-
-            localizableNodes.ForEach(x =>
-            {
-                var path = x.Attributes[ConversionConstants.PathAttr].Value!;
-                var propertyValue = entry.SelectToken(path);
-                if (propertyValue == null)
-                {
-                    return;
-                }
-
-                if (propertyValue is JValue jValue)
-                {
-                    jValue.Value = HttpUtility.HtmlDecode(x.InnerHtml.Trim());
-                }
-            });
+            ApplyHtmlToEntry(doc, entry, logger);
         }
         catch(Exception ex)
         {
             logger?.LogError.Invoke($"Conversion to Contentstack JSON failed. Entry json: {entry}; HTML: {doc.DocumentNode.OuterHtml}; Exception: {ex}", null);
             throw new PluginMisconfigurationException("The HTML file structure should match the source article");
         }
+    }
+
+    public static List<(string ContentTypeId, string EntryId)> ExtractReferencedEntryIds(Stream file)
+    {
+        var doc = new HtmlDocument();
+        doc.Load(file, System.Text.Encoding.UTF8);
+        file.Position = 0;
+
+        return doc.DocumentNode
+            .SelectNodes($"//article[@{ConversionConstants.RefContentTypeAttr}]")
+            ?.Select(node => (
+                node.GetAttributeValue(ConversionConstants.RefContentTypeAttr, string.Empty),
+                node.GetAttributeValue(ConversionConstants.RefEntryIdAttr, string.Empty)
+            ))
+            .Where(x => !string.IsNullOrEmpty(x.Item1) && !string.IsNullOrEmpty(x.Item2))
+            .Distinct()
+            .ToList()
+            ?? new List<(string, string)>();
+    }
+
+    public static void UpdateReferencedEntryFromHtml(Stream file, string contentTypeId, string entryId, JObject entry, Logger? logger)
+    {
+        var doc = new HtmlDocument();
+        doc.Load(file, System.Text.Encoding.UTF8);
+        file.Position = 0;
+
+        var articleNode = doc.DocumentNode.SelectSingleNode(
+            $"//article[@{ConversionConstants.RefContentTypeAttr}='{contentTypeId}' and @{ConversionConstants.RefEntryIdAttr}='{entryId}']");
+
+        if (articleNode is null)
+            return;
+
+        var tempDoc = new HtmlDocument();
+        tempDoc.LoadHtml($"<body>{articleNode.InnerHtml}</body>");
+
+        try
+        {
+            ApplyHtmlToEntry(tempDoc, entry, logger);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError.Invoke($"Failed to update referenced entry {entryId}: {ex}", null);
+            throw;
+        }
+    }
+
+    private static void ApplyHtmlToEntry(HtmlDocument doc, JObject entry, Logger? logger)
+    {
+        var repeatableNodes = doc.DocumentNode.Descendants()
+            .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null &&
+                   x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']") != null &&
+                   x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']").Count > 0)
+            .ToList();
+
+        foreach (var node in repeatableNodes)
+        {
+            var path = node.Attributes[ConversionConstants.PathAttr].Value!;
+            var arrayToken = entry.SelectToken(path) as JArray;
+
+            if (arrayToken == null)
+            {
+                logger?.LogWarning.Invoke($"Path {path} not found or is not an array in the entry", null);
+                continue;
+            }
+
+            var multipleItems = node.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']").ToList();
+
+            if (multipleItems.Count != arrayToken.Count)
+            {
+                logger?.LogWarning.Invoke($"Mismatch in array lengths for path {path}. HTML has {multipleItems.Count} items, JSON has {arrayToken.Count} items", null);
+            }
+
+            for (int i = 0; i < Math.Min(multipleItems.Count, arrayToken.Count); i++)
+            {
+                var itemValue = HttpUtility.HtmlDecode(multipleItems[i].InnerHtml.Trim());
+                if (arrayToken[i] is JValue jValue)
+                    jValue.Value = itemValue;
+                else
+                    arrayToken[i] = itemValue;
+            }
+        }
+
+        var localizableNodes = doc.DocumentNode.Descendants()
+            .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
+            .ToList();
+
+        localizableNodes.ForEach(x =>
+        {
+            var path = x.Attributes[ConversionConstants.PathAttr].Value!;
+            var propertyValue = entry.SelectToken(path);
+            if (propertyValue == null)
+                return;
+
+            if (propertyValue is JValue jValue)
+                jValue.Value = HttpUtility.HtmlDecode(x.InnerHtml.Trim());
+        });
     }
 
     public static (string? ContentTypeId, string? EntryId) ExtractContentTypeAndEntryId(Stream file)

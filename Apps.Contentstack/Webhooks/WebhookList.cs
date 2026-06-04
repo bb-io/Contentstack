@@ -80,6 +80,36 @@ public class WebhookList
             });
         }
 
+        if (!string.IsNullOrEmpty(contentTypeRequest.ExcludeLocale) &&
+            string.Equals(contentTypeRequest.ExcludeLocale, result.Data.Entry.Locale, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
+            {
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            });
+        }
+
+        if (!string.IsNullOrEmpty(contentTypeRequest.UpdatedByUserId) &&
+            !string.Equals(contentTypeRequest.UpdatedByUserId, result.Data.Entry.UpdatedBy, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
+            {
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            });
+        }
+
+        if (!string.IsNullOrEmpty(contentTypeRequest.NotUpdatedByUserId) &&
+            string.Equals(contentTypeRequest.NotUpdatedByUserId, result.Data.Entry.UpdatedBy, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
+            {
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            });
+        }
+
         return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
         {
             HttpResponseMessage = null,

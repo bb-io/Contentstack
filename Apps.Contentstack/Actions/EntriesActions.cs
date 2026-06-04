@@ -140,6 +140,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         };
     }
 
+    [Action("Get entry locales", Description = "Get all locales that an entry exists in")]
+    public async Task<GetEntryLocalesResponse> GetEntryLocales([ActionParameter] EntryRequest input)
+    {
+        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.ContentId}/locales";
+        var request = new ContentstackRequest(endpoint, Method.Get, Creds);
+        return await Client.ExecuteWithErrorHandling<GetEntryLocalesResponse>(request);
+    }
+
     [Action("Get entry", Description = "Get details of a specific entry")]
     public async Task<SingleEntryEntity> GetEntry(
         [ActionParameter] EntryRequest input,
@@ -405,15 +413,41 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         
 
         Console.WriteLine(entry.ToString());
+
+        IEnumerable<ReferencedEntryData>? referencedData = null;
+
+        if (input.IncludeReferencedEntryContent)
+        {
+            var referenced = ExtractReferencedEntriesWithContentTypes(entry, contentType);
+            var list = new List<ReferencedEntryData>();
+
+            foreach (var (refEntryUid, refContentTypeUid) in referenced)
+            {
+                try
+                {
+                    var refSchema = await GetContentType(refContentTypeUid);
+                    var refEntry = await GetEntryJObject(refContentTypeUid, refEntryUid, locale.Locale);
+                    list.Add(new ReferencedEntryData(refContentTypeUid, refEntryUid, refEntry, refSchema));
+                }
+                catch
+                {
+                    // If we can't fetch a referenced entry, skip it silently
+                }
+            }
+
+            referencedData = list;
+        }
+
         var html = JsonToHtmlConverter.ToHtml(
-            entry, 
-            contentType, 
-            InvocationContext.Logger, 
+            entry,
+            contentType,
+            InvocationContext.Logger,
             input.ContentTypeId,
             input.ContentId,
             Creds.Get(CredsNames.StackApiKey).Value,
             updatedByUser,
-            input.ExcludeFieldIds
+            input.ExcludeFieldIds,
+            referencedData
         );
 
         var entryTitle = entry["title"]?.ToString() ?? input.ContentId;
@@ -445,8 +479,9 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var originalBytes = await file.GetByteData(); 
 
         var html = Encoding.UTF8.GetString(originalBytes);
+        bool isXliff = Xliff2Serializer.IsXliff2(html) || Xliff1Serializer.IsXliff1(html);
         Transformation? transformation = null;
-        if (Xliff2Serializer.IsXliff2(html) || Xliff1Serializer.IsXliff1(html))
+        if (isXliff)
         {
             transformation = Transformation.Parse(html, input.Content.Name);
             var transformedHtml = transformation.Target().Serialize()
@@ -471,10 +506,34 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
         await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
+        var errors = new List<string>();
+
+        if (!isXliff)
+        {
+            memoryStream.Position = 0;
+            var referencedEntryIds = HtmlToJsonConverter.ExtractReferencedEntryIds(memoryStream);
+
+            foreach (var (refContentTypeId, refEntryId) in referencedEntryIds)
+            {
+                try
+                {
+                    var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
+                    memoryStream.Position = 0;
+                    HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId, refEntryId, refEntry, InvocationContext.Logger);
+                    await UpdateEntry(refContentTypeId, refEntryId, refEntry, input.Locale);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Entry {refEntryId} (content type: {refContentTypeId}) could not be updated — {ex.Message}");
+                }
+            }
+        }
+
         var result = new UploadEntryResponse
         {
             ContentTypeId = contentTypeId,
-            EntryId = entryId
+            EntryId = entryId,
+            Errors = errors.Count > 0 ? errors : null
         };
 
         if (transformation is not null)
@@ -654,6 +713,92 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         {
             referencedEntryUids.Add(uid);
         }
+    }
+
+    private static HashSet<(string EntryUid, string ContentTypeUid)> ExtractReferencedEntriesWithContentTypes(JObject entry, ContentTypeBlockEntity contentType)
+    {
+        var results = new HashSet<(string, string)>();
+        ExtractReferencedEntriesFromSchema(entry, contentType.Schema, results);
+        return results;
+    }
+
+    private static void ExtractReferencedEntriesFromSchema(JObject entry, JArray schema, ISet<(string EntryUid, string ContentTypeUid)> results)
+    {
+        foreach (var schemaToken in schema.OfType<JObject>())
+        {
+            var field = schemaToken.ToObject<EntryProperty>();
+            var fieldUid = schemaToken["uid"]?.ToString();
+
+            if (field is null || string.IsNullOrWhiteSpace(fieldUid))
+                continue;
+
+            field.Uid = fieldUid;
+            var property = entry[fieldUid];
+            if (property is null)
+                continue;
+
+            ExtractReferencedEntriesFromProperty(property, field, results);
+        }
+    }
+
+    private static void ExtractReferencedEntriesFromProperty(JToken property, EntryProperty field, ISet<(string EntryUid, string ContentTypeUid)> results)
+    {
+        switch (field.DataType)
+        {
+            case "reference":
+                AddReferencesWithContentTypes(property, results);
+                break;
+            case "group":
+            case "global_field":
+                if (field.Schema is null)
+                    break;
+
+                if (property is JObject propertyObject)
+                    ExtractReferencedEntriesFromSchema(propertyObject, field.Schema, results);
+                else if (property is JArray propertyArray)
+                    foreach (var item in propertyArray.OfType<JObject>())
+                        ExtractReferencedEntriesFromSchema(item, field.Schema, results);
+                break;
+            case "blocks":
+                if (field.Blocks is null || property is not JArray blocksArray)
+                    break;
+
+                foreach (var blockItem in blocksArray.OfType<JObject>())
+                {
+                    var blockProperty = blockItem.Properties().FirstOrDefault();
+                    if (blockProperty?.Value is not JObject blockValue)
+                        continue;
+
+                    var blockSchema = field.Blocks.FirstOrDefault(x => x.Uid == blockProperty.Name)?.Schema;
+                    if (blockSchema is not null)
+                        ExtractReferencedEntriesFromSchema(blockValue, blockSchema, results);
+                }
+                break;
+        }
+    }
+
+    private static void AddReferencesWithContentTypes(JToken property, ISet<(string EntryUid, string ContentTypeUid)> results)
+    {
+        if (property is JArray propertyArray)
+        {
+            foreach (var item in propertyArray)
+                AddReferenceWithContentType(item, results);
+            return;
+        }
+
+        AddReferenceWithContentType(property, results);
+    }
+
+    private static void AddReferenceWithContentType(JToken referenceToken, ISet<(string EntryUid, string ContentTypeUid)> results)
+    {
+        if (referenceToken.Type != JTokenType.Object)
+            return;
+
+        var uid = referenceToken["uid"]?.ToString() ?? referenceToken["entry_uid"]?.ToString();
+        var contentTypeUid = referenceToken["_content_type_uid"]?.ToString();
+
+        if (!string.IsNullOrWhiteSpace(uid) && !string.IsNullOrWhiteSpace(contentTypeUid))
+            results.Add((uid, contentTypeUid));
     }
 
     private async Task SetEntryProperty<T>(string contentTypeId, string entryId, string property, T value,
