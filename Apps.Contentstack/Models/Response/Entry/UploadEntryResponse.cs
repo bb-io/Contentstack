@@ -12,4 +12,7 @@ public class UploadEntryResponse
     public string EntryId { get; set; } = string.Empty;
 
     public FileReference Content { get; set; }
+
+    [Display("Errors", Description = "List of errors that occurred while updating referenced entries. The main entry is always updated regardless of these errors.")]
+    public IEnumerable<string>? Errors { get; set; }
 }

@@ -13,8 +13,16 @@ namespace Apps.Contentstack.HtmlConversion;
 
 public static class JsonToHtmlConverter
 {
-    public static byte[] ToHtml(JObject entry, ContentTypeBlockEntity contentType, Logger? logger, string contentTypeId,
-        string entryId, string stackApiKey, UserEntity? updatedByUser, IEnumerable<string>? excludedFieldIds = null)
+    public static byte[] ToHtml(
+        JObject entry,
+        ContentTypeBlockEntity contentType,
+        Logger? logger,
+        string contentTypeId,
+        string entryId,
+        string stackApiKey,
+        UserEntity? updatedByUser,
+        IEnumerable<string>? excludedFieldIds = null,
+        IEnumerable<(string ContentTypeId, string EntryId, JObject Entry, ContentTypeBlockEntity Schema)>? referencedEntries = null)
     {
         try
         {
@@ -24,6 +32,18 @@ public static class JsonToHtmlConverter
                 .Select(x => x.Trim())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
             ParseEntryToHtml(entryId, entry, contentType, doc, body, excludedFields);
+
+            if (referencedEntries != null)
+            {
+                foreach (var (refCtId, refEntryId, refEntry, refSchema) in referencedEntries)
+                {
+                    var articleNode = doc.CreateElement("article");
+                    articleNode.SetAttributeValue(ConversionConstants.RefContentTypeAttr, refCtId);
+                    articleNode.SetAttributeValue(ConversionConstants.RefEntryIdAttr, refEntryId);
+                    ParseEntryToHtml(refEntryId, refEntry, refSchema, doc, articleNode, excludedFields);
+                    body.AppendChild(articleNode);
+                }
+            }
 
             return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
         }

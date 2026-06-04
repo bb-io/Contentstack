@@ -23,6 +23,9 @@ public class DownloadEntryRequest : IDownloadContentInput
     [Display("Include referenced entry UIDs", Description = "Optionally include referenced entry UIDs from the root entry in the action output")]
     public bool IncludeReferencedEntryUids { get; set; }
 
+    [Display("Include referenced entry content", Description = "If enabled, the HTML file will include the translatable content of all referenced entries. These will be updated when the file is uploaded back via 'Upload entry content'.")]
+    public bool IncludeReferencedEntryContent { get; set; }
+
     public void Validate()
     {
         if (string.IsNullOrEmpty(ContentTypeId))
