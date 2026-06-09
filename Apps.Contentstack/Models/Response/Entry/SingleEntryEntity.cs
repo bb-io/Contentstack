@@ -10,6 +10,7 @@ public class SingleEntryEntity : EntryEntity
 
     public SingleEntryEntity(EntryEntity entry, List<string> assetIds)
     {
+        ContentTypeId = entry.ContentTypeId;
         ContentId = entry.ContentId;
         Locale = entry.Locale;
         Title = entry.Title;

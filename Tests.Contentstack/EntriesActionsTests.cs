@@ -135,6 +135,7 @@ public class EntriesActionsTests : TestBase
         {
             Console.WriteLine($"{item.ContentId} - {item.Title} - {item.Tags}");
             Assert.IsNotNull(item);
+            Assert.AreEqual("page", item.ContentTypeId);
         }
     }
 }
