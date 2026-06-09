@@ -110,7 +110,16 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
             var request = new ContentstackRequest(endpoint, Method.Get, Creds);
             var result = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);
-            allEntries.AddRange(result.Entries);
+            var entriesForContentType = (result.Entries ?? Enumerable.Empty<EntryEntity>())
+                .Select(entry =>
+                {
+                    entry.ContentTypeId = string.IsNullOrWhiteSpace(entry.ContentTypeId)
+                        ? contentTypeId
+                        : entry.ContentTypeId;
+                    return entry;
+                });
+
+            allEntries.AddRange(entriesForContentType);
         }
 
         var entries = allEntries

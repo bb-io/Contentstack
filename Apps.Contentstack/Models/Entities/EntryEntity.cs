@@ -6,6 +6,10 @@ namespace Apps.Contentstack.Models.Entities;
 
 public class EntryEntity : IDownloadContentInput
 {
+    [Display("Content type ID")]
+    [JsonProperty("_content_type_uid")]
+    public string ContentTypeId { get; set; } = string.Empty;
+
     [Display("Entry ID")]
     [JsonProperty("uid")]
     public string ContentId { get; set; } = string.Empty;
