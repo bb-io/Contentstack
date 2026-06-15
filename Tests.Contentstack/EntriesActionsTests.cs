@@ -31,6 +31,7 @@ public class EntriesActionsTests : TestBase
         Console.WriteLine(result.ContentId);
         Console.WriteLine(result.Locale);
         Assert.IsNotNull(result);
+        Assert.AreEqual(entryRequest.ContentTypeId, result.ContentTypeId);
     }
 
     [TestMethod]
