@@ -176,6 +176,9 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var assetIds = ExtractAssetIdsFromJObject(entryJObject, fileExtension.FileExtension);
 
         var entry = JsonConvert.DeserializeObject<EntryResponse>(response.Content!)!;
+        entry.Entry.ContentTypeId = string.IsNullOrWhiteSpace(entry.Entry.ContentTypeId)
+            ? input.ContentTypeId
+            : entry.Entry.ContentTypeId;
         return new SingleEntryEntity(entry.Entry, assetIds);
     }
 
