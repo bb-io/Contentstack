@@ -40,6 +40,7 @@ Before you can connect you need to make sure that:
 ### Entries
 
 - **Get entry** returns details of the specific entry.
+- **Get entry references** returns entry IDs and content type IDs where the specific entry is referenced.
 - **Get entry string/number/date/boolean property** gets data of the specified entry's property.
 - **Set entry string/number/date/boolean property** sets data to the specified entry's property.
 - **Search entries** returns a list of entries based on provided filter criterias, including locale, tag, workflow stage, and updated before/after.

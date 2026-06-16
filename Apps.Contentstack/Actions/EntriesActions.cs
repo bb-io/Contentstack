@@ -157,6 +157,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return await Client.ExecuteWithErrorHandling<GetEntryLocalesResponse>(request);
     }
 
+    [Action("Get entry references", Description = "Get entry IDs and content type IDs where a specific entry is referenced")]
+    public async Task<GetEntryReferencesResponse> GetEntryReferences([ActionParameter] EntryRequest input)
+    {
+        var endpoint = $"v3/content_types/{input.ContentTypeId}/entries/{input.ContentId}/references";
+        var request = new ContentstackRequest(endpoint, Method.Get, Creds);
+        return await Client.ExecuteWithErrorHandling<GetEntryReferencesResponse>(request);
+    }
+
     [Action("Get entry", Description = "Get details of a specific entry")]
     public async Task<SingleEntryEntity> GetEntry(
         [ActionParameter] EntryRequest input,
