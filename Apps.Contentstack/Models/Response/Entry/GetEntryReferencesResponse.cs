@@ -19,6 +19,4 @@ public class GetEntryReferencesResponse
     [Display("References")]
     [JsonProperty("references")]
     public IEnumerable<EntryReferenceItem> References { get; set; } = [];
-
-    public int Count { get; set; }
 }
