@@ -74,10 +74,13 @@ public static class HtmlToJsonConverter
 
     private static void ApplyHtmlToEntry(HtmlDocument doc, JObject entry, Logger? logger)
     {
-        var repeatableNodes = doc.DocumentNode.Descendants()
+        var entryNodes = doc.DocumentNode.Descendants()
             .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null &&
-                   x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']") != null &&
-                   x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']").Count > 0)
+                        !x.Ancestors().Any(a => a.Name == "article"))
+            .ToList();
+
+        var repeatableNodes = entryNodes
+            .Where(x => x.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']") is { Count: > 0 })
             .ToList();
 
         foreach (var node in repeatableNodes)
@@ -108,11 +111,7 @@ public static class HtmlToJsonConverter
             }
         }
 
-        var localizableNodes = doc.DocumentNode.Descendants()
-            .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
-            .ToList();
-
-        localizableNodes.ForEach(x =>
+        entryNodes.ForEach(x =>
         {
             var path = x.Attributes[ConversionConstants.PathAttr].Value!;
             var propertyValue = entry.SelectToken(path);

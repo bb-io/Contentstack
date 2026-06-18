@@ -335,33 +335,37 @@ public static class JsonToHtmlConverter
             groupContainer.SetAttributeValue(ConversionConstants.BlackbirdMax, serialized!);
         }
         
-        // Process each property in the group
         foreach (var property in groupProperty.Properties())
         {
-            // Skip metadata and other special properties
             if (property.Name.StartsWith("_"))
                 continue;
 
             if (excludedFieldIds.Contains(property.Name))
                 continue;
-                
-            // Find the schema for this property
+
             var propertySchema = entryProperty.Schema.FirstOrDefault(s => s["uid"]?.ToString() == property.Name);
             if (propertySchema != null)
             {
-                // Create entry property for nested field
-                var nestedProperty = new EntryProperty
+                var nestedProperty = propertySchema.ToObject<EntryProperty>()!;
+                nestedProperty.Uid = property.Name;
+
+                if (nestedProperty.Multiple && property.Value is JArray arrayValue)
                 {
-                    Uid = property.Name,
-                    DataType = propertySchema["data_type"]?.ToString()
-                };
-                
-                // Process the nested property
-                ProcessPropertyByType(entryId, property.Value, nestedProperty, doc, groupContainer, excludedFieldIds);
+                    foreach (var item in arrayValue)
+                    {
+                        var itemContainer = doc.CreateElement(HtmlConstants.Div);
+                        itemContainer.SetAttributeValue("class", ConversionConstants.MultipleComplexItemClass);
+                        ProcessPropertyByType(entryId, item, nestedProperty, doc, itemContainer, excludedFieldIds);
+                        groupContainer.AppendChild(itemContainer);
+                    }
+                }
+                else
+                {
+                    ProcessPropertyByType(entryId, property.Value, nestedProperty, doc, groupContainer, excludedFieldIds);
+                }
             }
             else
             {
-                // Fallback for properties without schema
                 AppendContent(entryId, doc, groupContainer, property.Value, HtmlConstants.Div);
             }
         }
