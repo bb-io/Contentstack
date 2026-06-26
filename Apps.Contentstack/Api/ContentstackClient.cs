@@ -31,7 +31,7 @@ public class ContentstackClient(AuthenticationCredentialsProvider[] creds) : Bla
 
     public override async Task<RestResponse> ExecuteWithErrorHandling(RestRequest request)
     {
-        RestResponse restResponse = await ExecuteAsync(request);
+        RestResponse restResponse = await ContentstackRetryPolicies.ExecuteWithRateLimitRetry(() => ExecuteAsync(request));
         if (!restResponse.IsSuccessStatusCode)
         {
             throw ConfigureErrorException(restResponse);
