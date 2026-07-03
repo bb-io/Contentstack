@@ -21,5 +21,8 @@ public class EntryProperty
     
     public JArray? Schema { get; set; }
 
+    [JsonProperty("reference_to")]
+    public JToken? ReferenceTo { get; set; }
+
     public JObject? ContentTypeSchema { get; set; } = new();
 }

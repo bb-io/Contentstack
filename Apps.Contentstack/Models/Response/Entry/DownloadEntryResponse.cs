@@ -10,4 +10,7 @@ public record DownloadEntryResponse(FileReference Content) : IDownloadContentOut
 
     [Display("Referenced entry UIDs")]
     public IEnumerable<string>? ReferencedEntryUids { get; set; }
+
+    [Display("Referenced entries")]
+    public IEnumerable<EntryReferenceItem>? ReferencedEntries { get; set; }
 }

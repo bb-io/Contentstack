@@ -44,7 +44,7 @@ Before you can connect you need to make sure that:
 - **Get entry string/number/date/boolean property** gets data of the specified entry's property.
 - **Set entry string/number/date/boolean property** sets data to the specified entry's property.
 - **Search entries** returns a list of entries based on provided filter criterias, including locale, tag, workflow stage, and updated before/after.
-- **Download entry content** downloads entry content converted to an HTML file, can exclude specified field IDs, and can optionally return referenced entry UIDs from the root entry.
+- **Download entry content** downloads entry content converted to an HTML file, can exclude specified field IDs, and can optionally return referenced entry UIDs plus referenced entry/content type pairs from the root entry.
 - **Upload entry content** updates entry content from a file.
 - **Get entry file metadata** extracts content type and entry IDs from a file.
 - **Publish entry** publish a specific entry based on ID.

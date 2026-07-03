@@ -20,6 +20,10 @@ public class EntryEntity : IDownloadContentInput
 
     [Display("Entry title")]
     public string Title { get; set; } = string.Empty;
+
+    [Display("URL")]
+    [JsonProperty("url")]
+    public string Url { get; set; } = string.Empty;
     
     [Display("Created at")]
     public DateTime CreatedAt { get; set; }
