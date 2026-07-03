@@ -485,6 +485,13 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         if (input.IncludeReferencedEntryUids)
         {
             response.ReferencedEntryUids = ExtractReferencedEntryUids(entry, contentType);
+            response.ReferencedEntries = ExtractReferencedEntriesWithContentTypes(entry, contentType)
+                .Select(x => new EntryReferenceItem
+                {
+                    EntryId = x.EntryUid,
+                    ContentTypeId = x.ContentTypeUid
+                })
+                .ToList();
         }
 
         return response;
@@ -766,7 +773,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         switch (field.DataType)
         {
             case "reference":
-                AddReferencesWithContentTypes(property, results);
+                AddReferencesWithContentTypes(property, field, results);
                 break;
             case "group":
             case "global_field":
@@ -797,28 +804,58 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         }
     }
 
-    private static void AddReferencesWithContentTypes(JToken property, ISet<(string EntryUid, string ContentTypeUid)> results)
+    private static void AddReferencesWithContentTypes(JToken property, EntryProperty field, ISet<(string EntryUid, string ContentTypeUid)> results)
     {
         if (property is JArray propertyArray)
         {
             foreach (var item in propertyArray)
-                AddReferenceWithContentType(item, results);
+                AddReferenceWithContentType(item, field, results);
             return;
         }
 
-        AddReferenceWithContentType(property, results);
+        AddReferenceWithContentType(property, field, results);
     }
 
-    private static void AddReferenceWithContentType(JToken referenceToken, ISet<(string EntryUid, string ContentTypeUid)> results)
+    private static void AddReferenceWithContentType(JToken referenceToken, EntryProperty field, ISet<(string EntryUid, string ContentTypeUid)> results)
     {
-        if (referenceToken.Type != JTokenType.Object)
+        var uid = referenceToken.Type switch
+        {
+            JTokenType.String => referenceToken.ToString(),
+            JTokenType.Object => referenceToken["uid"]?.ToString() ?? referenceToken["entry_uid"]?.ToString(),
+            _ => null
+        };
+
+        if (string.IsNullOrWhiteSpace(uid))
             return;
 
-        var uid = referenceToken["uid"]?.ToString() ?? referenceToken["entry_uid"]?.ToString();
-        var contentTypeUid = referenceToken["_content_type_uid"]?.ToString();
+        var contentTypeUid = referenceToken.Type == JTokenType.Object
+            ? referenceToken["_content_type_uid"]?.ToString()
+            : null;
+
+        if (string.IsNullOrWhiteSpace(contentTypeUid))
+        {
+            var fallbackContentTypeIds = GetReferenceContentTypeIds(field).ToList();
+            if (fallbackContentTypeIds.Count == 1)
+                contentTypeUid = fallbackContentTypeIds[0];
+        }
 
         if (!string.IsNullOrWhiteSpace(uid) && !string.IsNullOrWhiteSpace(contentTypeUid))
             results.Add((uid, contentTypeUid));
+    }
+
+    private static IEnumerable<string> GetReferenceContentTypeIds(EntryProperty field)
+    {
+        if (field.ReferenceTo is null)
+            return [];
+
+        return field.ReferenceTo.Type switch
+        {
+            JTokenType.String => [field.ReferenceTo.ToString()],
+            JTokenType.Array => field.ReferenceTo.Values<string>()
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase),
+            _ => []
+        };
     }
 
     private async Task SetEntryProperty<T>(string contentTypeId, string entryId, string property, T value,
