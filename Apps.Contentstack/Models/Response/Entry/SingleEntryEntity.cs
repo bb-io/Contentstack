@@ -14,6 +14,7 @@ public class SingleEntryEntity : EntryEntity
         ContentId = entry.ContentId;
         Locale = entry.Locale;
         Title = entry.Title;
+        Url = entry.Url;
         CreatedAt = entry.CreatedAt;
         Tags = entry.Tags;
         InProgress = entry.InProgress;
