@@ -1,7 +1,6 @@
 ﻿using Tests.Contentstack.Base;
 using Apps.Contentstack.Actions;
 using Apps.Contentstack.Models.Request;
-using Apps.Contentstack.Models.Request.ContentType;
 using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Request.Workflow;
 using Blackbird.Applications.Sdk.Common.Files;
@@ -11,6 +10,26 @@ namespace Tests.Contentstack;
 [TestClass]
 public class EntriesActionsTests : TestBase
 {
+    [TestMethod]
+    public async Task ReplaceEntryAssets_IsSuccess()
+    {
+        // Arrange
+        var actions = new EntriesActions(InvocationContext, FileManager);
+        var entryInput = new EntryRequest
+        {
+            ContentTypeId = "test",
+            ContentId = "blt13a2690c316a972c"
+        };
+        var replaceInput = new ReplaceEntryAssetsRequest
+        {
+            ReplaceAssetsContaining = "ukrainian",
+            WithAssetsContaining = "english"
+        };
+
+        // Act
+        await actions.ReplaceEntryAssets(entryInput, replaceInput);
+    }
+    
     [TestMethod]
     public async Task GetEntry_WithValidEntryIdAndContentType_ReturnsEntryObject()
     {

@@ -17,6 +17,34 @@ public class ContentstackClient(AuthenticationCredentialsProvider[] creds) : Bla
 {
     protected override JsonSerializerSettings? JsonSettings => JsonConfig.Settings;
 
+    public async Task<List<TItem>> Paginate<TResponse, TItem>(
+        RestRequest request,
+        Func<TResponse, IEnumerable<TItem>?> selector,
+        Func<List<TItem>, bool>? stopWhen = null,
+        int pageSize = 100)
+    {
+        var results = new List<TItem>();
+        int skip = 0;
+
+        while (true)
+        {
+            request.AddOrUpdateParameter(new QueryParameter("skip", skip.ToString()));
+            request.AddOrUpdateParameter(new QueryParameter("limit", pageSize.ToString()));
+
+            var response = await ExecuteWithErrorHandling<TResponse>(request);
+            var page = (selector(response) ?? []).ToList();
+
+            results.AddRange(page);
+
+            if (page.Count < pageSize || (stopWhen?.Invoke(results) ?? false))
+                break;
+
+            skip += pageSize;
+        }
+
+        return results;
+    }
+    
     public override async Task<T> ExecuteWithErrorHandling<T>(RestRequest request)
     {
         string content = (await ExecuteWithErrorHandling(request)).Content;
