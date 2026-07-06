@@ -617,7 +617,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
     #endregion
     
-    [Action("Replace entry assets", Description = "Replace referenced entry assets")]
+    [Action("Replace entry assets", Description = "Replace referenced entry assets by matching filename substrings")]
     public async Task ReplaceEntryAssets(
         [ActionParameter] EntryRequest entryInput,
         [ActionParameter] ReplaceEntryAssetsRequest replaceInput)

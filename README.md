@@ -50,6 +50,7 @@ Before you can connect you need to make sure that:
 - **Publish entry** publish a specific entry based on ID.
 - **Add tag to entry** adds tag to specific entry.
 - **Remove tag from entry** removes tag from specific entry.
+- **Replace entry assets** replace referenced entry assets by matching filename substrings.
 
 ## Events
 
