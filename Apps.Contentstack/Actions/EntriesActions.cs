@@ -6,7 +6,6 @@ using Apps.Contentstack.Invocables;
 using Apps.Contentstack.Models;
 using Apps.Contentstack.Models.Entities;
 using Apps.Contentstack.Models.Request;
-using Apps.Contentstack.Models.Request.ContentType;
 using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Request.Property;
 using Apps.Contentstack.Models.Request.Workflow;
@@ -34,9 +33,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
 using System.Globalization;
-using System.Net;
 using System.Net.Mime;
 using System.Text;
+using Apps.Contentstack.Extensions;
+using Apps.Contentstack.Helper;
 
 namespace Apps.Contentstack.Actions;
 
@@ -616,6 +616,65 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     }
 
     #endregion
+    
+    [Action("Replace entry assets", Description = "Replace referenced entry assets")]
+    public async Task ReplaceEntryAssets(
+        [ActionParameter] EntryRequest entryInput,
+        [ActionParameter] ReplaceEntryAssetsRequest replaceInput)
+    {
+        var entry = await GetEntryJObject(entryInput.ContentTypeId, entryInput.ContentId);
+        var assetObjects = entry.Descendants()
+            .OfType<JObject>()
+            .Where(x => x.IsAssetObject())
+            .ToList();
+        
+        var targetNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var toReplace = new List<(JObject AssetObject, string TargetName)>();
+
+        string search = replaceInput.ReplaceAssetsContaining;
+        string replacement = replaceInput.WithAssetsContaining;
+        
+        foreach (var assetObject in assetObjects)
+        {
+            string? sourceName = assetObject["filename"]?.ToString();
+            if (string.IsNullOrEmpty(sourceName) || !sourceName.Contains(search, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            string targetName = sourceName.Replace(search, replacement, StringComparison.OrdinalIgnoreCase);
+            toReplace.Add((assetObject, targetName));
+            targetNames.Add(targetName);
+        }
+
+        if (toReplace.Count == 0)
+            return;
+
+        var assetHelper = new AssetHelper(InvocationContext);
+        var foundAssets = await assetHelper.FindAssetsByNames(targetNames);
+        
+        if (foundAssets.Count == 0)
+        {
+            throw new PluginMisconfigurationException(
+                $"No replacement assets found. Looked for: {string.Join(", ", targetNames)}. " + 
+                "Make sure assets with these names exist or check your 'replace'/'with' inputs.");
+        }
+
+        foreach (var assetObject in assetObjects)
+        {
+            var sourceName = assetObject["filename"]?.ToString();
+            var newUid = assetObject["uid"]?.ToString();
+
+            if (!string.IsNullOrEmpty(sourceName) && sourceName.Contains(search, StringComparison.OrdinalIgnoreCase))
+            {
+                var targetName = sourceName.Replace(search, replacement, StringComparison.OrdinalIgnoreCase);
+                if (foundAssets.TryGetValue(targetName, out var newAsset))
+                    newUid = newAsset.Uid;
+            }
+
+            assetObject.Replace(new JValue(newUid));
+        }
+
+        await assetHelper.UpdateEntryWithAssets(entryInput.ContentTypeId, entryInput.ContentId, entry);
+    }
 
     #region Utils
 
