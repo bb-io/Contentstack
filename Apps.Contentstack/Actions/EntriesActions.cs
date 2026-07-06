@@ -626,6 +626,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var assetObjects = entry.Descendants()
             .OfType<JObject>()
             .Where(x => x.IsAssetObject())
+            .Select(node => (Node: node, Asset: node.ToObject<AssetEntity>()!))
             .ToList();
         
         var targetNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -634,14 +635,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         string search = replaceInput.ReplaceAssetsContaining;
         string replacement = replaceInput.WithAssetsContaining;
         
-        foreach (var assetObject in assetObjects)
+        foreach (var (node, asset) in assetObjects)
         {
-            string? sourceName = assetObject["filename"]?.ToString();
+            string? sourceName = asset.Filename;
             if (string.IsNullOrEmpty(sourceName) || !sourceName.Contains(search, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             string targetName = sourceName.Replace(search, replacement, StringComparison.OrdinalIgnoreCase);
-            toReplace.Add((assetObject, targetName));
+            toReplace.Add((node, targetName));
             targetNames.Add(targetName);
         }
 
@@ -658,10 +659,10 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 "Make sure assets with these names exist or check your 'replace'/'with' inputs.");
         }
 
-        foreach (var assetObject in assetObjects)
+        foreach (var (node, asset) in assetObjects)
         {
-            var sourceName = assetObject["filename"]?.ToString();
-            var newUid = assetObject["uid"]?.ToString();
+            string sourceName = asset.Filename;
+            string newUid = asset.Uid;
 
             if (!string.IsNullOrEmpty(sourceName) && sourceName.Contains(search, StringComparison.OrdinalIgnoreCase))
             {
@@ -670,7 +671,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                     newUid = newAsset.Uid;
             }
 
-            assetObject.Replace(new JValue(newUid));
+            node.Replace(new JValue(newUid));
         }
 
         await assetHelper.UpdateEntryWithAssets(entryInput.ContentTypeId, entryInput.ContentId, entry);
