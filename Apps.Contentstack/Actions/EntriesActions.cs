@@ -528,7 +528,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var entryId = input.ContentId ?? extractedEntryId ??
             throw new PluginMisconfigurationException("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
-        var entry = await GetEntryJObject(contentTypeId, entryId);
+        var entry = await GetEntryJObject(contentTypeId, entryId, input.Locale);
         HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
 
         await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
