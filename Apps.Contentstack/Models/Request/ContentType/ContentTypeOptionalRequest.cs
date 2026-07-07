@@ -6,9 +6,9 @@ namespace Apps.Contentstack.Models.Request.ContentType;
 
 public class ContentTypeOptionalRequest
 {
-    [Display("Content type ID")]
+    [Display("Content type IDs")]
     [DataSource(typeof(ContentTypeDataHandler))]
-    public string? ContentTypeId { get; set; }
+    public IEnumerable<string>? ContentTypeIds { get; set; }
 
     [Display("Locale")]
     [DataSource(typeof(LanguageDataHandler))]
