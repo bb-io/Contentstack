@@ -46,7 +46,8 @@ public class WebhookList
 
         var result = JsonConvert.DeserializeObject<ContentstackWebhookResponse<EntryWebhookPayload>>(payload, JsonConfig.Settings)!;
 
-        if (contentTypeRequest.ContentTypeIds != null && !contentTypeRequest.ContentTypeIds.Contains(result.Data.ContentType.Uid))
+        if (contentTypeRequest.ContentTypeIds != null && 
+            !contentTypeRequest.ContentTypeIds.Contains(result.Data.ContentType.Uid, StringComparer.OrdinalIgnoreCase))
         {
             return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
             {
