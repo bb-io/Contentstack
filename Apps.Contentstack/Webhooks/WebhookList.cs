@@ -46,17 +46,15 @@ public class WebhookList
 
         var result = JsonConvert.DeserializeObject<ContentstackWebhookResponse<EntryWebhookPayload>>(payload, JsonConfig.Settings)!;
 
-        if (!string.IsNullOrEmpty(contentTypeRequest.ContentTypeId))
+        if (contentTypeRequest.ContentTypeIds != null && !contentTypeRequest.ContentTypeIds.Contains(result.Data.ContentType.Uid))
         {
-            if (contentTypeRequest.ContentTypeId != result.Data.ContentType.Uid)
+            return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
             {
-                return Task.FromResult(new WebhookResponse<EntryWebhookResponse>()
-                {
-                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                    Result = null
-                });
-            }
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            });
         }
+        
         if (!string.IsNullOrEmpty(contentTypeRequest.Tag))
         {
             var tags = result.Data.Entry.Tags;
