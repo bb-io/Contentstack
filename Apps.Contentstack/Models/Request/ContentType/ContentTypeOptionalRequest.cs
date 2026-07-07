@@ -6,7 +6,7 @@ namespace Apps.Contentstack.Models.Request.ContentType;
 
 public class ContentTypeOptionalRequest
 {
-    [Display("Content type ID")]
+    [Display("Content type IDs")]
     [DataSource(typeof(ContentTypeDataHandler))]
     public IEnumerable<string>? ContentTypeIds { get; set; }
 
