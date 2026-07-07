@@ -179,9 +179,10 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
         var request = new ContentstackRequest(endpoint, Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling(request);
+        
         var jObject = (JObject)JsonConvert.DeserializeObject(response.Content!)!;
         var entryJObject = jObject["entry"] as JObject;
-        var assetIds = ExtractAssetIdsFromJObject(entryJObject, fileExtension.FileExtension);
+        var assetIds = entryJObject.ExtractAssetIds(fileExtension.FileExtension);
 
         var entry = JsonConvert.DeserializeObject<EntryResponse>(response.Content!)!;
         entry.Entry.ContentTypeId = string.IsNullOrWhiteSpace(entry.Entry.ContentTypeId)
@@ -678,29 +679,6 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     }
 
     #region Utils
-
-    private static List<string> ExtractAssetIdsFromJObject(JObject entryJObject, string? fileExtension)
-    {
-        var assetIds = new List<string>();
-        foreach (var property in entryJObject.Properties())
-        {
-            if (property.Value.Type == JTokenType.Object)
-            {
-                var potentialAsset = property.Value as JObject;
-                var uid = potentialAsset?["uid"]?.ToString();
-                var fileName = potentialAsset?["filename"]?.ToString();
-                if (!string.IsNullOrEmpty(uid) && !string.IsNullOrEmpty(fileName))
-                {
-                    if (string.IsNullOrEmpty(fileExtension) || fileName.EndsWith(fileExtension))
-                    {
-                        assetIds.Add(uid);
-                    }
-                }
-            }
-        }
-
-        return assetIds;
-    }
 
     private static List<string> ExtractReferencedEntryUids(JObject entry, ContentTypeBlockEntity contentType)
     {
