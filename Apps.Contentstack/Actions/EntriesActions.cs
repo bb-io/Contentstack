@@ -918,7 +918,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             .Select(x => x["uid"]!.ToString())
             .ToList();
 
-        fileProps.ForEach(x => RemovePropertyByName(entryObject, x));
+        fileProps.ForEach(x => DowngradeFilePropertyByName(entryObject, x));
 
         var endpoint = $"v3/content_types/{contentTypeId}/entries/{entryId}";
         if (!string.IsNullOrWhiteSpace(locale))
@@ -971,23 +971,40 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return response.ContentType;
     }
 
-    private static void RemovePropertyByName(JToken token, string propertyName)
+    private static void DowngradeFilePropertyByName(JToken token, string propertyName)
     {
-        if (token.Type is JTokenType.Property or JTokenType.Array)
+        if (token is JArray array)
         {
-            foreach (var child in token.Children())
-                RemovePropertyByName(child, propertyName);
-
+            foreach (var item in array)
+                DowngradeFilePropertyByName(item, propertyName);
             return;
         }
 
         if (token is not JObject obj)
             return;
 
-        obj.Property(propertyName)?.Remove();
+        var target = obj.Property(propertyName);
+        if (target is not null)
+            target.Value = DowngradeFileValue(target.Value);
 
-        foreach (var child in obj.Children())
-            RemovePropertyByName(child, propertyName);
+        foreach (var child in obj.Properties())
+        {
+            if (child.Name == propertyName)
+                continue;
+            DowngradeFilePropertyByName(child.Value, propertyName);
+        }
+    }
+
+    private static JToken DowngradeFileValue(JToken value)
+    {
+        return value switch
+        {
+            JObject asset when asset["uid"]?.Type == JTokenType.String
+                => new JValue(asset["uid"]!.ToString()),
+            JArray array
+                => new JArray(array.Select(DowngradeFileValue)),
+            _ => value
+        };
     }
 
     #endregion

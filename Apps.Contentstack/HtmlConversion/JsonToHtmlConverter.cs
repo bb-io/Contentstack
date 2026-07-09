@@ -147,6 +147,9 @@ public static class JsonToHtmlConverter
             case "link":
                 LinkToHtml(entryId, doc, parentNode, property as JObject, entryProperty, max);
                 break;
+            case "file":
+                FileToHtml(entryId, doc, parentNode, property, entryProperty);
+                break;
             case "group" when entryProperty.Uid == "comments":
                 CommentsToHtml(entryId, doc, parentNode, property as JObject, entryProperty, max);
                 break;
@@ -234,6 +237,34 @@ public static class JsonToHtmlConverter
 
         AppendContent(entryId, doc, body, property["title"]!, HtmlConstants.Div, max);
         AppendContent(entryId, doc, body, property["href"]!, HtmlConstants.Div, max);
+    }
+
+    private static void FileToHtml(string entryId, HtmlDocument doc, HtmlNode parentNode, JToken? property, EntryProperty entryProperty)
+    {
+        if (property is null || property.Type == JTokenType.Null)
+            return;
+
+        var uid = ExtractAssetUid(property);
+        if (string.IsNullOrEmpty(uid))
+            return;
+
+        var path = string.IsNullOrEmpty(property.Path) ? entryProperty.Uid : property.Path;
+        var contentNode = doc.CreateElement(HtmlConstants.Div);
+        contentNode.SetAttributeValue(ConversionConstants.PathAttr, path);
+        contentNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{path}");
+        contentNode.SetAttributeValue(ConversionConstants.BlackbirdFieldType, ConversionConstants.FileFieldType);
+        contentNode.SetAttributeValue(ConversionConstants.BlackbirdFileUid, uid);
+        parentNode.AppendChild(contentNode);
+    }
+
+    private static string? ExtractAssetUid(JToken token)
+    {
+        return token switch
+        {
+            JValue { Value: string s } => s,
+            JObject obj => obj["uid"]?.ToString(),
+            _ => null
+        };
     }
 
     private static void AppendContent(string entryId, HtmlDocument doc, HtmlNode parentNode, JToken property, string htmlTag,
