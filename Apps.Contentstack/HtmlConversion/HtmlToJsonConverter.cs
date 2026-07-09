@@ -114,6 +114,15 @@ public static class HtmlToJsonConverter
         entryNodes.ForEach(x =>
         {
             var path = x.Attributes[ConversionConstants.PathAttr].Value!;
+
+            if (x.Attributes[ConversionConstants.BlackbirdFieldType]?.Value == ConversionConstants.FileFieldType)
+            {
+                var uid = x.Attributes[ConversionConstants.BlackbirdFileUid]?.Value;
+                if (!string.IsNullOrEmpty(uid))
+                    SetFileUidAtPath(entry, path, uid);
+                return;
+            }
+
             var propertyValue = entry.SelectToken(path);
             if (propertyValue == null)
                 return;
@@ -124,6 +133,34 @@ public static class HtmlToJsonConverter
                 jValue.Value = HttpUtility.HtmlDecode(innerHtml);
             }
         });
+    }
+
+    private static void SetFileUidAtPath(JObject entry, string path, string uid)
+    {
+        var newValue = new JValue(uid);
+        var existing = entry.SelectToken(path);
+        if (existing != null)
+        {
+            existing.Replace(newValue);
+            return;
+        }
+
+        var segments = path.Split('.');
+        JObject cursor = entry;
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            if (cursor[segments[i]] is JObject nested)
+            {
+                cursor = nested;
+            }
+            else
+            {
+                var created = new JObject();
+                cursor[segments[i]] = created;
+                cursor = created;
+            }
+        }
+        cursor[segments[^1]] = newValue;
     }
 
     public static (string? ContentTypeId, string? EntryId) ExtractContentTypeAndEntryId(Stream file)
