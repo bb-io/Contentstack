@@ -119,7 +119,10 @@ public static class HtmlToJsonConverter
                 return;
 
             if (propertyValue is JValue jValue)
-                jValue.Value = HttpUtility.HtmlDecode(x.InnerHtml.Trim());
+            {
+                var innerHtml = x.Name == "span" ? x.InnerHtml : x.InnerHtml.Trim();
+                jValue.Value = HttpUtility.HtmlDecode(innerHtml);
+            }
         });
     }
 
