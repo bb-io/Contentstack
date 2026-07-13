@@ -137,11 +137,65 @@ public static class HtmlToJsonConverter
 
     private static void SetFileUidAtPath(JObject entry, string path, string uid)
     {
+        var newValue = new JValue(uid);
         var existing = entry.SelectToken(path);
-        if (existing == null)
+        if (existing != null)
+        {
+            existing.Replace(newValue);
             return;
+        }
 
-        existing.Replace(new JValue(uid));
+        var segments = ParseJPathSegments(path);
+        JToken current = entry;
+        for (int i = 0; i < segments.Count - 1; i++)
+        {
+            var (name, index) = segments[i];
+            if (index.HasValue)
+            {
+                var parent = (JObject)current;
+                if (parent[name] is not JArray arr)
+                {
+                    arr = new JArray();
+                    parent[name] = arr;
+                }
+                while (arr.Count <= index.Value)
+                    arr.Add(new JObject());
+                current = arr[index.Value]!;
+            }
+            else
+            {
+                var parent = (JObject)current;
+                if (parent[name] is JObject nested)
+                    current = nested;
+                else
+                {
+                    var created = new JObject();
+                    parent[name] = created;
+                    current = created;
+                }
+            }
+        }
+        ((JObject)current)[segments[^1].Name] = newValue;
+    }
+
+    private static List<(string Name, int? Index)> ParseJPathSegments(string path)
+    {
+        var segments = new List<(string, int?)>();
+        foreach (var segment in path.Split('.'))
+        {
+            var bracket = segment.IndexOf('[');
+            if (bracket >= 0 && segment.EndsWith(']'))
+            {
+                var name = segment[..bracket];
+                var index = int.Parse(segment[(bracket + 1)..^1]);
+                segments.Add((name, index));
+            }
+            else
+            {
+                segments.Add((segment, null));
+            }
+        }
+        return segments;
     }
 
     public static (string? ContentTypeId, string? EntryId) ExtractContentTypeAndEntryId(Stream file)
