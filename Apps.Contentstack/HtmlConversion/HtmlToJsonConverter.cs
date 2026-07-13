@@ -116,7 +116,12 @@ public static class HtmlToJsonConverter
             var path = x.Attributes[ConversionConstants.PathAttr].Value!;
 
             if (x.Attributes[ConversionConstants.BlackbirdFieldType]?.Value == ConversionConstants.FileFieldType)
+            {
+                var uid = x.Attributes[ConversionConstants.BlackbirdFileUid]?.Value;
+                if (!string.IsNullOrEmpty(uid))
+                    SetFileUidAtPath(entry, path, uid);
                 return;
+            }
 
             var propertyValue = entry.SelectToken(path);
             if (propertyValue == null)
@@ -128,6 +133,15 @@ public static class HtmlToJsonConverter
                 jValue.Value = HttpUtility.HtmlDecode(innerHtml);
             }
         });
+    }
+
+    private static void SetFileUidAtPath(JObject entry, string path, string uid)
+    {
+        var existing = entry.SelectToken(path);
+        if (existing == null)
+            return;
+
+        existing.Replace(new JValue(uid));
     }
 
     public static (string? ContentTypeId, string? EntryId) ExtractContentTypeAndEntryId(Stream file)
