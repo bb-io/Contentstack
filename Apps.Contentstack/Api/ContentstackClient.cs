@@ -1,5 +1,4 @@
 using Apps.Contentstack.Constants;
-using Apps.Contentstack.Models.Response;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
@@ -48,10 +47,21 @@ public class ContentstackClient(AuthenticationCredentialsProvider[] creds) : Bla
     public override async Task<T> ExecuteWithErrorHandling<T>(RestRequest request)
     {
         string content = (await ExecuteWithErrorHandling(request)).Content;
-        T val = JsonConvert.DeserializeObject<T>(content, JsonSettings);
+
+        T? val;
+        try
+        {
+            val = JsonConvert.DeserializeObject<T>(content, JsonSettings);
+        }
+        catch (JsonException)
+        {
+            // A successful status code does not guarantee a JSON body: proxies and gateways can answer with HTML.
+            throw new PluginApplicationException(ContentstackErrorParser.BuildParseFailureMessage(typeof(T), content));
+        }
+
         if (val == null)
         {
-            throw new Exception($"Could not parse {content} to {typeof(T)}");
+            throw new PluginApplicationException(ContentstackErrorParser.BuildParseFailureMessage(typeof(T), content));
         }
 
         return val;
@@ -70,18 +80,5 @@ public class ContentstackClient(AuthenticationCredentialsProvider[] creds) : Bla
 
 
     protected override Exception ConfigureErrorException(RestResponse response)
-    {
-        if (string.IsNullOrEmpty(response.Content))
-            return new PluginApplicationException(response.ErrorMessage);
-
-        var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content, JsonSettings)!;
-
-        if (error.Errors != null && error.Errors.TryGetValue("title", out var titleErrors))
-        {
-            var detail = string.Join("; ", titleErrors);
-            return new PluginMisconfigurationException($"Field Title incorrect: {detail}");
-        }
-
-        return new PluginApplicationException(error.ErrorMessage + $"; {error.Errors}");
-    }
+        => ContentstackErrorParser.BuildException(response.StatusCode, response.Content, response.ErrorMessage);
 }

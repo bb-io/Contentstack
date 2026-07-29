@@ -4,6 +4,6 @@ namespace Apps.Contentstack.Models.Response;
 
 public class ErrorResponse
 {
-    public string ErrorMessage { get; set; }
+    public string? ErrorMessage { get; set; }
     public JObject? Errors { get; set; }
 }
