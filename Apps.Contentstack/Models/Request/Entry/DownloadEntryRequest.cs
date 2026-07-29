@@ -20,6 +20,10 @@ public class DownloadEntryRequest : IDownloadContentInput
     [Display("Exclude field IDs", Description = "Optional list of field IDs to exclude from the generated HTML file")]
     public IEnumerable<string>? ExcludeFieldIds { get; set; }
 
+    [Display("Exclude content type IDs", Description = "Optional list of content type IDs whose referenced entries are skipped. Referenced entries of these content types are not included in the generated HTML file and are not returned in the action output.")]
+    [DataSource(typeof(ContentTypeDataHandler))]
+    public IEnumerable<string>? ExcludeContentTypeIds { get; set; }
+
     [Display("Include referenced entry UIDs", Description = "Optionally include referenced entry UIDs and referenced entries from the root entry in the action output")]
     public bool IncludeReferencedEntryUids { get; set; }
 
