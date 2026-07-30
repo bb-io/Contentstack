@@ -27,7 +27,7 @@ public class EntriesActionsTests : TestBase
         };
 
         // Act
-        await actions.ReplaceEntryAssets(entryInput, replaceInput);
+        await actions.ReplaceEntryAssets(entryInput, replaceInput, null);
     }
     
     [TestMethod]

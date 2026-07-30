@@ -636,10 +636,10 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     
     [Action("Replace entry assets", Description = "Replace referenced entry assets by matching filename substrings")]
     public async Task ReplaceEntryAssets(
-        [ActionParameter] EntryRequest entryInput,
-        [ActionParameter] ReplaceEntryAssetsRequest replaceInput)
+        [ActionParameter] EntryRequest entryInput, 
+        [ActionParameter] ReplaceEntryAssetsRequest replaceInput, [ActionParameter] LocaleRequest locale)
     {
-        var entry = await GetEntryJObject(entryInput.ContentTypeId, entryInput.ContentId);
+        var entry = await GetEntryJObject(entryInput.ContentTypeId, entryInput.ContentId, locale.Locale);
         var assetObjects = entry.Descendants()
             .OfType<JObject>()
             .Where(x => x.IsAssetObject())
