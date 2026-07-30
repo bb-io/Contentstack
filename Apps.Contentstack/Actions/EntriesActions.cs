@@ -691,7 +691,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             node.Replace(new JValue(newUid));
         }
 
-        await assetHelper.UpdateEntryWithAssets(entryInput.ContentTypeId, entryInput.ContentId, entry);
+        await assetHelper.UpdateEntryWithAssets(entryInput.ContentTypeId, entryInput.ContentId, entry, locale.Locale);
     }
 
     #region Utils

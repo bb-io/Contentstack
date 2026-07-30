@@ -11,9 +11,9 @@ namespace Apps.Contentstack.Helper;
 
 public class AssetHelper(InvocationContext context) : AppInvocable(context)
 {
-    public async Task UpdateEntryWithAssets(string contentTypeId, string entryId, JObject entryObject)
+    public async Task UpdateEntryWithAssets(string contentTypeId, string entryId, JObject entryObject, string? locale)
     {
-        var endpoint = $"v3/content_types/{contentTypeId}/entries/{entryId}";
+        var endpoint = $"v3/content_types/{contentTypeId}/entries/{entryId}?locale={locale}";
         var request = new ContentstackRequest(endpoint, Method.Put, Creds).WithJsonBody(new { entry = entryObject });
 
         await Client.ExecuteWithErrorHandling(request);
