@@ -25,8 +25,8 @@ public class WebhookList
     [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdated)]
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On any entry published")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryPublished(WebhookRequest webhookRequest,
-        [WebhookParameter] ContentTypeOptionalRequest contentTypeRequest)
-        => HandleEntryWebhook(webhookRequest, contentTypeRequest);
+        [WebhookParameter] EntryPublishedOptionalRequest filterRequest)
+        => HandleEntryWebhook(webhookRequest, filterRequest, filterRequest.Environment);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On any entry unpublished")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryUnpublished(WebhookRequest webhookRequest,
@@ -39,12 +39,22 @@ public class WebhookList
         => HandleEntryWebhook(webhookRequest, contentTypeRequest);
 
     private Task<WebhookResponse<EntryWebhookResponse>> HandleEntryWebhook(WebhookRequest webhookRequest,
-        ContentTypeOptionalRequest contentTypeRequest)
+        ContentTypeOptionalRequest contentTypeRequest, string? environment = null)
     {
         var payload = webhookRequest.Body.ToString();
         ArgumentException.ThrowIfNullOrEmpty(payload, nameof(webhookRequest.Body));
 
         var result = JsonConvert.DeserializeObject<ContentstackWebhookResponse<EntryWebhookPayload>>(payload, JsonConfig.Settings)!;
+
+        if (!string.IsNullOrEmpty(environment) &&
+            !string.Equals(environment, result.Data.Environment?.Uid, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
+            {
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            });
+        }
 
         if (contentTypeRequest.ContentTypeIds != null && 
             !contentTypeRequest.ContentTypeIds.Contains(result.Data.ContentType.Uid, StringComparer.OrdinalIgnoreCase))
