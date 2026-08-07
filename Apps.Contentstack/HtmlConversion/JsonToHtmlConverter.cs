@@ -56,45 +56,39 @@ public static class JsonToHtmlConverter
         }
     }
 
-    private static void ParseEntryToHtml(string entryId, JObject entry, ContentTypeBlockEntity contentType, HtmlDocument doc,
+    private static void ParseEntryToHtml(string entryId, JObject entry, ContentTypeBlockEntity contentType,
+        HtmlDocument doc,
         HtmlNode body, ISet<string> excludedFieldIds)
     {
         contentType.Schema.GetLocalizableFields().ForEach(x =>
         {
-        if (excludedFieldIds.Contains(x.Uid))
-            return;
+            if (excludedFieldIds.Contains(x.Uid))
+                return;
 
-        var property = entry[x.Uid];
+            var property = entry[x.Uid];
 
-        if (property is null)
-            return;
+            if (property is null)
+                return;
 
-        var max = x.ContentTypeSchema?["max"]?.Value<int>();
+            var max = x.ContentTypeSchema?["max"]?.Value<int>();
 
-        if (x.Multiple && property is JArray propertyArray)
-        {
-            var containerNode = doc.CreateElement(HtmlConstants.Div);
-            containerNode.SetAttributeValue(ConversionConstants.PathAttr, x.Uid);
-            containerNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{x.Uid}");
-
-            if (max.HasValue)
+            if (x.Multiple && property is JArray propertyArray)
             {
-                containerNode.SetAttributeValue("max", max.Value.ToString());
-                var serialized = SizeRestrictionHelper.Serialize(new SizeRestrictions { MaximumSize = max.Value });
-                containerNode.SetAttributeValue(ConversionConstants.BlackbirdMax, serialized!);
-             }
-                
-                // Create individual item containers for each array element
+                var containerNode = doc.CreateElement(HtmlConstants.Div);
+                containerNode.SetAttributeValue(ConversionConstants.PathAttr, x.Uid);
+                containerNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{x.Uid}");
+
+                ApplyMax(containerNode, max);
+
                 foreach (var item in propertyArray)
                 {
                     var itemContainer = doc.CreateElement("div");
-                    
-                    // For rich text, we preserve the HTML structure but wrap it in a container
-                    if (x.DataType == "text" && 
-                        item.ToString().StartsWith("<") && 
-                        item.ToString().EndsWith(">"))
+
+                    if (x.DataType == "text" && IsHtmlValue(x, item.ToString()))
                     {
                         itemContainer.SetAttributeValue("class", ConversionConstants.MultipleItemClass);
+                        itemContainer.SetAttributeValue(ConversionConstants.BlackbirdFieldType,
+                            ConversionConstants.HtmlFieldType);
                         itemContainer.InnerHtml = item.ToString();
                     }
                     else
@@ -102,24 +96,25 @@ public static class JsonToHtmlConverter
                         itemContainer.SetAttributeValue("class", ConversionConstants.MultipleComplexItemClass);
                         ProcessPropertyByType(entryId, item, x, doc, itemContainer, excludedFieldIds, max);
                     }
-                    
+
                     containerNode.AppendChild(itemContainer);
                 }
-                
+
                 body.AppendChild(containerNode);
                 return;
             }
-            
+
             ProcessPropertyByType(entryId, property, x, doc, body, excludedFieldIds, max);
         });
     }
-    
-    private static void ProcessPropertyByType(string entryId, JToken property, EntryProperty entryProperty, HtmlDocument doc, 
+
+    private static void ProcessPropertyByType(string entryId, JToken property, EntryProperty entryProperty,
+        HtmlDocument doc,
         HtmlNode parentNode, ISet<string> excludedFieldIds, int? max = null)
     {
         if (property == null)
             return;
-            
+
         switch (entryProperty.DataType)
         {
             case "json":
@@ -137,9 +132,11 @@ public static class JsonToHtmlConverter
                         var blockContentType = entryProperty.Blocks.FirstOrDefault(b => b.Uid == blockName);
 
                         if (blockContentType != null)
-                            ParseEntryToHtml(entryId, (block.Value as JObject)!, blockContentType, doc, parentNode, excludedFieldIds);
+                            ParseEntryToHtml(entryId, (block.Value as JObject)!, blockContentType, doc, parentNode,
+                                excludedFieldIds);
                     }
                 }
+
                 break;
             case "global_field":
                 GlobalFieldToHtml(entryId, doc, parentNode, property as JObject, entryProperty, excludedFieldIds, max);
@@ -158,35 +155,54 @@ public static class JsonToHtmlConverter
                 break;
             default:
                 if (property.Type == JTokenType.String)
-                {
-                    // Handle rich text content in string format
-                    string stringValue = property.ToString();
-                    if (stringValue.StartsWith("<") && stringValue.EndsWith(">"))
-                    {
-                        var contentNode = doc.CreateElement(HtmlConstants.Div);
-                        contentNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
-                        contentNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{property.Path}");
-                        
-                        if (max.HasValue)
-                        {
-                            contentNode.SetAttributeValue("max", max.Value.ToString());
-                            var serialized = SizeRestrictionHelper.Serialize(new SizeRestrictions { MaximumSize = max.Value });
-                            contentNode.SetAttributeValue(ConversionConstants.BlackbirdMax, serialized!);
-                        }
-                        
-                        contentNode.InnerHtml = stringValue;
-                        parentNode.AppendChild(contentNode);
-                    }
-                    else
-                    {
-                        AppendContent(entryId, doc, parentNode, property, HtmlConstants.Div, max);
-                    }
-                }
+                    StringToHtml(entryId, doc, parentNode, property, entryProperty, max);
+
                 break;
         }
     }
 
-    private static void BlocksToHtml(string entryId, HtmlDocument doc, HtmlNode body, JArray? blocks, EntryProperty entryProperty,
+    /// <summary>
+    /// A string field is either plain text or an HTML rich text value. The schema decides: guessing from the
+    /// value's shape misses markup that starts or ends with a bare text run, and escaping such a value turns
+    /// its tables and paragraphs into visible source.
+    /// </summary>
+    private static void StringToHtml(string entryId, HtmlDocument doc, HtmlNode parentNode, JToken property,
+        EntryProperty entryProperty, int? max)
+    {
+        var value = property.ToString();
+
+        if (!IsHtmlValue(entryProperty, value))
+        {
+            AppendContent(entryId, doc, parentNode, property, HtmlConstants.Div, max);
+            return;
+        }
+
+        var contentNode = doc.CreateElement(HtmlConstants.Div);
+        contentNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
+        contentNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{property.Path}");
+        contentNode.SetAttributeValue(ConversionConstants.BlackbirdFieldType, ConversionConstants.HtmlFieldType);
+        ApplyMax(contentNode, max);
+
+        contentNode.InnerHtml = value;
+        parentNode.AppendChild(contentNode);
+    }
+
+    // The shape check stays as a fallback for schemas that carry no field metadata.
+    private static bool IsHtmlValue(EntryProperty entryProperty, string value)
+        => entryProperty.IsHtmlRichText || (value.StartsWith('<') && value.EndsWith('>'));
+
+    private static void ApplyMax(HtmlNode node, int? max)
+    {
+        if (!max.HasValue)
+            return;
+
+        node.SetAttributeValue("max", max.Value.ToString());
+        var serialized = SizeRestrictionHelper.Serialize(new SizeRestrictions { MaximumSize = max.Value });
+        node.SetAttributeValue(ConversionConstants.BlackbirdMax, serialized!);
+    }
+
+    private static void BlocksToHtml(string entryId, HtmlDocument doc, HtmlNode body, JArray? blocks,
+        EntryProperty entryProperty,
         ISet<string> excludedFieldIds)
     {
         if (entryProperty.Blocks is null || blocks is null)
@@ -202,23 +218,26 @@ public static class JsonToHtmlConverter
         });
     }
 
-    private static void JsonRichTextToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property, int? max = null)
+    private static void JsonRichTextToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property,
+        int? max = null)
     {
         if (property is null)
             return;
 
         var richTextNode = doc.CreateElement(HtmlConstants.Div);
 
-        var contentNodes = property.Descendants()
-            .Where(x => x is JProperty { Name: "text" })
-            .OfType<JProperty>()
-            .ToList();
+        if (!string.IsNullOrEmpty(property.Path))
+        {
+            richTextNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
+            richTextNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{property.Path}");
+        }
 
-        contentNodes.ForEach(x => AppendContent(entryId, doc, richTextNode, x, HtmlConstants.Span, max));
+        RichTextRenderer.RenderChildren(entryId, doc, richTextNode, property, max);
         body.AppendChild(richTextNode);
     }
 
-    private static void GlobalFieldToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty,
+    private static void GlobalFieldToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property,
+        EntryProperty entryProperty,
         ISet<string> excludedFieldIds, int? max = null)
     {
         if (property is null || entryProperty.Schema is null)
@@ -230,7 +249,8 @@ public static class JsonToHtmlConverter
         }, doc, body, excludedFieldIds);
     }
 
-    private static void LinkToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty, int? max = null)
+    private static void LinkToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property,
+        EntryProperty entryProperty, int? max = null)
     {
         if (property is null)
             return;
@@ -239,7 +259,8 @@ public static class JsonToHtmlConverter
         AppendContent(entryId, doc, body, property["href"]!, HtmlConstants.Div, max);
     }
 
-    private static void FileToHtml(string entryId, HtmlDocument doc, HtmlNode parentNode, JToken? property, EntryProperty entryProperty)
+    private static void FileToHtml(string entryId, HtmlDocument doc, HtmlNode parentNode, JToken? property,
+        EntryProperty entryProperty)
     {
         if (property is null || property.Type == JTokenType.Null)
             return;
@@ -267,12 +288,16 @@ public static class JsonToHtmlConverter
         };
     }
 
-    private static void AppendContent(string entryId, HtmlDocument doc, HtmlNode parentNode, JToken property, string htmlTag,
-        int? max = null)
+    internal static void AppendContent(string entryId, HtmlDocument doc, HtmlNode parentNode, JToken property,
+        string htmlTag,
+        int? max = null, string? fieldType = null)
     {
         var contentNode = doc.CreateElement(htmlTag);
         contentNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
         contentNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{property.Path}");
+
+        if (fieldType is not null)
+            contentNode.SetAttributeValue(ConversionConstants.BlackbirdFieldType, fieldType);
 
         if (max.HasValue)
         {
@@ -281,9 +306,17 @@ public static class JsonToHtmlConverter
             contentNode.SetAttributeValue(ConversionConstants.BlackbirdMax, serialized!);
         }
 
-        contentNode.InnerHtml = property is JProperty jProperty ? jProperty.Value.ToString() : property.ToString();
+        var value = property is JProperty jProperty ? jProperty.Value.ToString() : property.ToString();
+        contentNode.InnerHtml = EncodeText(value);
         parentNode.AppendChild(contentNode);
     }
+
+    /// <summary>
+    /// These values are plain text, not markup. Escaping the three text-node metacharacters keeps a stray
+    /// '&lt;' or '&amp;' from breaking the document; the upload side reverses it with HtmlDecode.
+    /// </summary>
+    private static string EncodeText(string value)
+        => value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
     private static void AddBlackbirdMeta(HtmlDocument htmlDoc, HtmlNode headNode, string name, string? value)
     {
@@ -297,7 +330,6 @@ public static class JsonToHtmlConverter
     private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string contentTypeId,
         string entryId, JObject entry, string stackApiKey, UserEntity? updatedByUser)
     {
-
         var locale = entry["locale"]?.Value<string>() ?? "en-us";
         var title = entry["title"]?.Value<string>();
 
@@ -321,7 +353,8 @@ public static class JsonToHtmlConverter
 
         AddBlackbirdMeta(htmlDoc, headNode, "ucid", entryId);
         AddBlackbirdMeta(htmlDoc, headNode, "content-name", title);
-        AddBlackbirdMeta(htmlDoc, headNode, "admin-url", $"https://app.contentstack.com/#!/stack/{stackApiKey}/content-type/{contentTypeId}/{locale}/entry/{entryId}/edit");
+        AddBlackbirdMeta(htmlDoc, headNode, "admin-url",
+            $"https://app.contentstack.com/#!/stack/{stackApiKey}/content-type/{contentTypeId}/{locale}/entry/{entryId}/edit");
         AddBlackbirdMeta(htmlDoc, headNode, "system-name", "Contentstack");
         AddBlackbirdMeta(htmlDoc, headNode, "system-ref", "https://www.contentstack.com");
 
@@ -333,28 +366,30 @@ public static class JsonToHtmlConverter
         if (updatedByUser is not null)
         {
             bodyNode.SetAttributeValue("its-rev-person", $"{updatedByUser.FirstName} {updatedByUser.LastName}");
-        }        
+        }
 
         htmlNode.AppendChild(bodyNode);
 
         return (htmlDoc, bodyNode);
     }
 
-    private static void CommentsToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property, EntryProperty entryProperty, int? max = null)
+    private static void CommentsToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property,
+        EntryProperty entryProperty, int? max = null)
     {
-        if(property is null)
+        if (property is null)
             return;
-    
+
         AppendContent(entryId, doc, body, property["comment"]!, HtmlConstants.Div, max);
         LinkToHtml(entryId, doc, body, property["call_to_action"] as JObject, entryProperty, max);
     }
 
-    private static void GroupToHtml(string entryId, HtmlDocument doc, HtmlNode parentNode, JObject? groupProperty, EntryProperty entryProperty,
+    private static void GroupToHtml(string entryId, HtmlDocument doc, HtmlNode parentNode, JObject? groupProperty,
+        EntryProperty entryProperty,
         ISet<string> excludedFieldIds, int? max = null)
     {
         if (groupProperty is null || entryProperty.Schema is null)
             return;
-            
+
         var groupContainer = doc.CreateElement(HtmlConstants.Div);
         groupContainer.SetAttributeValue(ConversionConstants.PathAttr, entryProperty.Uid);
         groupContainer.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{entryProperty.Uid}");
@@ -365,7 +400,7 @@ public static class JsonToHtmlConverter
             var serialized = SizeRestrictionHelper.Serialize(new SizeRestrictions { MaximumSize = max.Value });
             groupContainer.SetAttributeValue(ConversionConstants.BlackbirdMax, serialized!);
         }
-        
+
         foreach (var property in groupProperty.Properties())
         {
             if (property.Name.StartsWith("_"))
@@ -392,7 +427,8 @@ public static class JsonToHtmlConverter
                 }
                 else
                 {
-                    ProcessPropertyByType(entryId, property.Value, nestedProperty, doc, groupContainer, excludedFieldIds);
+                    ProcessPropertyByType(entryId, property.Value, nestedProperty, doc, groupContainer,
+                        excludedFieldIds);
                 }
             }
             else
@@ -400,7 +436,7 @@ public static class JsonToHtmlConverter
                 AppendContent(entryId, doc, groupContainer, property.Value, HtmlConstants.Div);
             }
         }
-        
+
         parentNode.AppendChild(groupContainer);
     }
 }

@@ -9,4 +9,8 @@ public class HtmlConstants
     public const string Paragraph = "p";
     public const string Span = "span";
     public const string H1 = "h1";
+    public const string Anchor = "a";
+    public const string Image = "img";
+    public const string TableCell = "td";
+    public const string TableHeaderCell = "th";
 }

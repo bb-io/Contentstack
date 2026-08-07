@@ -103,7 +103,7 @@ public static class HtmlToJsonConverter
 
             for (int i = 0; i < Math.Min(multipleItems.Count, arrayToken.Count); i++)
             {
-                var itemValue = HttpUtility.HtmlDecode(multipleItems[i].InnerHtml.Trim());
+                var itemValue = ExtractValue(multipleItems[i]);
                 if (arrayToken[i] is JValue jValue)
                     jValue.Value = itemValue;
                 else
@@ -128,11 +128,23 @@ public static class HtmlToJsonConverter
                 return;
 
             if (propertyValue is JValue jValue)
-            {
-                var innerHtml = x.Name == "span" ? x.InnerHtml : x.InnerHtml.Trim();
-                jValue.Value = HttpUtility.HtmlDecode(innerHtml);
-            }
+                jValue.Value = ExtractValue(x);
         });
+    }
+
+    private static string ExtractValue(HtmlNode node)
+    {
+        switch (node.Attributes[ConversionConstants.BlackbirdFieldType]?.Value)
+        {
+            case ConversionConstants.RichTextNodeFieldType:
+                return HttpUtility.HtmlDecode(node.InnerText);
+            
+            case ConversionConstants.HtmlFieldType:
+                return node.InnerHtml.Trim();
+        }
+
+        var innerHtml = node.Name == HtmlConstants.Span ? node.InnerHtml : node.InnerHtml.Trim();
+        return HttpUtility.HtmlDecode(innerHtml);
     }
 
     private static void SetFileUidAtPath(JObject entry, string path, string uid)

@@ -12,4 +12,6 @@ public static class ConversionConstants
     public const string BlackbirdFieldType = "data-blackbird-field-type";
     public const string BlackbirdFileUid = "data-blackbird-file-uid";
     public const string FileFieldType = "file";
+    public const string RichTextNodeFieldType = "rich-text-node";
+    public const string HtmlFieldType = "rich-text-html";
 }
