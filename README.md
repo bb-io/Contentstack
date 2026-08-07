@@ -64,7 +64,7 @@ Before you can connect you need to make sure that:
 
 - **On entry created**
 - **On entry deleted**
-- **On entry published** supports optional filters for content type, tag, and locale and outputs the locale of the published entry.
+- **On entry published** supports optional filters for content type, tag, locale, and environment and outputs the locale of the published entry.
 - **On entry unpublished**
 - **On entry updated**
 
