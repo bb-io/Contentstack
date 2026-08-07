@@ -548,7 +548,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var entry = await GetEntryJObject(contentTypeId, entryId, input.Locale);
         HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
 
-        //await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
+        await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
         var errors = new List<string>();
 
