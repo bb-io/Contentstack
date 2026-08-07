@@ -24,5 +24,12 @@ public class EntryProperty
     [JsonProperty("reference_to")]
     public JToken? ReferenceTo { get; set; }
 
+    [JsonProperty("field_metadata")]
+    public JObject? FieldMetadata { get; set; }
+
     public JObject? ContentTypeSchema { get; set; } = new();
+    
+    [JsonIgnore]
+    public bool IsHtmlRichText => FieldMetadata?["allow_rich_text"]?.Type == JTokenType.Boolean
+                                  && FieldMetadata["allow_rich_text"]!.Value<bool>();
 }
