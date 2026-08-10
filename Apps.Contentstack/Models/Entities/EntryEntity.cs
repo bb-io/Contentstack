@@ -32,6 +32,10 @@ public class EntryEntity : IDownloadContentInput
     [JsonProperty("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
+    [Display("Updated by")]
+    [JsonProperty("updated_by")]
+    public string UpdatedBy { get; set; } = string.Empty;
+
     [DefinitionIgnore, JsonProperty("_version")]
     public int Version { get; set; }
     

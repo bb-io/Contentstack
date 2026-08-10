@@ -61,7 +61,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             var result = await SearchEntries(new()
             {
                 ContentTypeIds = new[] { contentType.Uid }
-            }, new(), new(), new(), new());
+            }, new(), new(), new(), new(), new());
 
             bool isWorkflowStageFilterProvided = request.WorkflowStages != null && request.WorkflowStages.Any();
             if (isWorkflowStageFilterProvided)
@@ -89,7 +89,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] WorkflowStageFilterRequest workflowFilter,
         [ActionParameter] LocaleRequest locale,
         [ActionParameter] TagFilterRequest tagFilter,
-        [ActionParameter] UpdatedAtFilterRequest updatedAtFilter)
+        [ActionParameter] UpdatedAtFilterRequest updatedAtFilter,
+        [ActionParameter] UpdatedByFilterRequest updatedByFilter)
     {
         var contentTypeIds = searchRequest.ContentTypeIds?.ToArray();
         if (contentTypeIds == null || contentTypeIds.Length == 0)
@@ -104,6 +105,23 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         {
             var endpoint = $"v3/content_types/{contentTypeId}/entries"
                 .SetQueryParameter("include_workflow", "true");
+
+            if (updatedByFilter?.ExcludedUserIds != null && updatedByFilter.ExcludedUserIds.Any())
+            {
+                var excludedArray = updatedByFilter.ExcludedUserIds.Where(id => !string.IsNullOrWhiteSpace(id)).ToArray();
+                if (excludedArray.Length > 0)
+                {
+                    var queryJson = JsonConvert.SerializeObject(new
+                    {
+                        updated_by = new Dictionary<string, object>
+                {
+                    { "$nin", excludedArray }
+                }
+                    });
+
+                    endpoint = endpoint.SetQueryParameter("query", queryJson);
+                }
+            }
 
             if (!string.IsNullOrWhiteSpace(locale.Locale))
                 endpoint = endpoint.SetQueryParameter("locale", locale.Locale);

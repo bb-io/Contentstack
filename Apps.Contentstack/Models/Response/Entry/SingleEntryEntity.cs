@@ -21,5 +21,7 @@ public class SingleEntryEntity : EntryEntity
         Workflow = entry.Workflow;
         AssetIds = assetIds;
         Version = entry.Version;
+        UpdatedBy = entry.UpdatedBy;
+        UpdatedAt = entry.UpdatedAt;
     }
 }
