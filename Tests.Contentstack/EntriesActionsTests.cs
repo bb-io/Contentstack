@@ -150,7 +150,7 @@ public class EntriesActionsTests : TestBase
         var tagFilter = new TagFilterRequest { /*Tag = "insights explore toolkit1"*/ };
         var updatedAtFilter = new UpdatedAtFilterRequest { };
 
-        var result = await action.SearchEntries(searchRequest, workflowRequest, localeRequest, tagFilter, updatedAtFilter);
+        var result = await action.SearchEntries(searchRequest, workflowRequest, localeRequest, tagFilter, updatedAtFilter, null);
         foreach (var item in result.Entries)
         {
             Console.WriteLine($"{item.ContentId} - {item.Title} - {item.Tags}");

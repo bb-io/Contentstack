@@ -109,8 +109,10 @@ public class WebhookList
             });
         }
 
-        if (!string.IsNullOrEmpty(contentTypeRequest.NotUpdatedByUserId) &&
-            string.Equals(contentTypeRequest.NotUpdatedByUserId, result.Data.Entry.UpdatedBy, StringComparison.OrdinalIgnoreCase))
+        if (contentTypeRequest.NotUpdatedByUserId != null &&
+        !string.IsNullOrWhiteSpace(result.Data.Entry?.UpdatedBy) &&
+        contentTypeRequest.NotUpdatedByUserId.Any(id =>
+        string.Equals(id, result.Data.Entry.UpdatedBy, StringComparison.OrdinalIgnoreCase)))
         {
             return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
             {

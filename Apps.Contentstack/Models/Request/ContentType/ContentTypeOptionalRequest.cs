@@ -23,6 +23,6 @@ public class ContentTypeOptionalRequest
     [Display("Updated by user ID", Description = "Only fire this event if the entry was updated by this user")]
     public string? UpdatedByUserId { get; set; }
 
-    [Display("Not updated by user ID", Description = "Skip this event if the entry was updated by this user")]
-    public string? NotUpdatedByUserId { get; set; }
+    [Display("Not updated by (user IDs)", Description = "Skip this event if the entry was updated by this user")]
+    public IEnumerable<string>? NotUpdatedByUserId { get; set; }
 }

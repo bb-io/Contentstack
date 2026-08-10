@@ -127,7 +127,7 @@ public class WebhookFiltersTests
     public async Task OnEntryUpdated_NotUpdatedByUserIdMatches_ReturnsPreflight()
     {
         var webhookList = new WebhookList();
-        var filter = new ContentTypeOptionalRequest { NotUpdatedByUserId = "bltuser123" };
+        var filter = new ContentTypeOptionalRequest { NotUpdatedByUserId = ["bltuser123"] };
 
         var result = await webhookList.OnEntryUpdated(BuildRequest("en-us", updatedBy: "bltuser123"), filter);
 
@@ -139,7 +139,7 @@ public class WebhookFiltersTests
     public async Task OnEntryUpdated_NotUpdatedByUserIdDoesNotMatch_ReturnsResult()
     {
         var webhookList = new WebhookList();
-        var filter = new ContentTypeOptionalRequest { NotUpdatedByUserId = "bltuser123" };
+        var filter = new ContentTypeOptionalRequest { NotUpdatedByUserId = ["bltuser123"] };
 
         var result = await webhookList.OnEntryUpdated(BuildRequest("en-us", updatedBy: "bltuser456"), filter);
 
