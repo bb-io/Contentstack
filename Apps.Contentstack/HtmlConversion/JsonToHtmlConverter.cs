@@ -7,6 +7,7 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Filters.Shared;
 using HtmlAgilityPack;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.HtmlConversion;
@@ -230,11 +231,15 @@ public static class JsonToHtmlConverter
         {
             richTextNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
             richTextNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{property.Path}");
+            richTextNode.SetAttributeValue(ConversionConstants.BlackbirdJsonValue, EncodeJsonValue(property));
         }
 
         RichTextRenderer.RenderChildren(entryId, doc, richTextNode, property, max);
         body.AppendChild(richTextNode);
     }
+
+    internal static string EncodeJsonValue(JToken value)
+        => Convert.ToBase64String(Encoding.UTF8.GetBytes(value.ToString(Formatting.None)));
 
     private static void GlobalFieldToHtml(string entryId, HtmlDocument doc, HtmlNode body, JObject? property,
         EntryProperty entryProperty,

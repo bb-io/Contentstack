@@ -564,11 +564,11 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             throw new PluginMisconfigurationException("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
         var entry = await GetEntryJObject(contentTypeId, entryId, input.Locale);
-        HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
-
-        await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
         var errors = new List<string>();
+        errors.AddRange(HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger));
+
+        await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
         if (!isXliff)
         {
@@ -581,7 +581,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 {
                     var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
                     memoryStream.Position = 0;
-                    HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId, refEntryId, refEntry, InvocationContext.Logger);
+                    errors.AddRange(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId, refEntryId, refEntry, InvocationContext.Logger));
                     await UpdateEntry(refContentTypeId, refEntryId, refEntry, input.Locale);
                 }
                 catch (Exception ex)
