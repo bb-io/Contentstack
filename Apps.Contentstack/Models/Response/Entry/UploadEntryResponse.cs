@@ -13,6 +13,6 @@ public class UploadEntryResponse
 
     public FileReference Content { get; set; }
 
-    [Display("Errors", Description = "List of errors that occurred while updating referenced entries. The main entry is always updated regardless of these errors.")]
+    [Display("Errors", Description = "Values from the file that could not be imported and referenced entries that could not be updated. The main entry is always updated regardless of these errors.")]
     public IEnumerable<string>? Errors { get; set; }
 }
