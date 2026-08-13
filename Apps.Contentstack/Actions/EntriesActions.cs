@@ -126,6 +126,9 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             if (!string.IsNullOrWhiteSpace(locale.Locale))
                 endpoint = endpoint.SetQueryParameter("locale", locale.Locale);
 
+            if (!string.IsNullOrWhiteSpace(searchRequest.Environment))
+                endpoint = endpoint.SetQueryParameter("environment", searchRequest.Environment);
+
             var request = new ContentstackRequest(endpoint, Method.Get, Creds);
             var result = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);
             var entriesForContentType = (result.Entries ?? Enumerable.Empty<EntryEntity>())
