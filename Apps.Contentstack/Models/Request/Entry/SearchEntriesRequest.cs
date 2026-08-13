@@ -9,4 +9,8 @@ public class SearchEntriesRequest
     [Display("Content types")]
     [DataSource(typeof(ContentTypeDataHandler))]
     public IEnumerable<string>? ContentTypeIds { get; set; }
+
+    [Display("Environment")]
+    [DataSource(typeof(EnvironmentNameDataHandler))]
+    public string? Environment { get; set; }
 }
