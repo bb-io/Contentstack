@@ -501,13 +501,13 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             referencedData
         );
 
-        var entryTitle = entry["title"]?.ToString() ?? input.ContentId;
-        if (!string.IsNullOrEmpty(locale.Locale)) 
+        var entryTitle = FileNameHelper.SanitizeBaseName(entry["title"]?.ToString(), input.ContentId);
+        if (!string.IsNullOrEmpty(locale.Locale))
             entryTitle = $"{entryTitle}_{locale.Locale}";
-        
+
         var file = await fileManagementClient.UploadAsync(
-            new MemoryStream(html), 
-            MediaTypeNames.Text.Html, 
+            new MemoryStream(html),
+            MediaTypeNames.Text.Html,
             $"{entryTitle}.html"
         );
 
