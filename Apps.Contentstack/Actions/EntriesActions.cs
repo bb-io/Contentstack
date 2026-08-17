@@ -568,8 +568,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
         var entry = await GetEntryJObject(contentTypeId, entryId, input.Locale);
 
-        var errors = new List<string>();
-        errors.AddRange(HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger));
+        var report = HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
+        var errors = report.Errors;
 
         await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
@@ -584,7 +584,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 {
                     var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
                     memoryStream.Position = 0;
-                    errors.AddRange(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId, refEntryId, refEntry, InvocationContext.Logger));
+                    report.Add(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId, refEntryId, refEntry, InvocationContext.Logger));
                     await UpdateEntry(refContentTypeId, refEntryId, refEntry, input.Locale);
                 }
                 catch (Exception ex)
@@ -598,7 +598,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         {
             ContentTypeId = contentTypeId,
             EntryId = entryId,
-            Errors = errors.Count > 0 ? errors : null
+            Errors = errors.Count > 0 ? errors : null,
+            CreatedFields = report.CreatedFields.Count > 0 ? report.CreatedFields : null
         };
 
         if (transformation is not null)
