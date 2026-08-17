@@ -13,7 +13,7 @@ public static class HtmlToJsonConverter
     private const string ContentTypeMetaTag = "blackbird-content-type-id";
     private const string EntryMetaTag = "blackbird-entry-id";
 
-    public static List<string> UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger)
+    public static EntryImportReport UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger)
     {
         var doc = new HtmlDocument();
         doc.Load(file, System.Text.Encoding.UTF8);
@@ -47,7 +47,7 @@ public static class HtmlToJsonConverter
             ?? new List<(string, string)>();
     }
 
-    public static List<string> UpdateReferencedEntryFromHtml(Stream file, string contentTypeId, string entryId, JObject entry, Logger? logger)
+    public static EntryImportReport UpdateReferencedEntryFromHtml(Stream file, string contentTypeId, string entryId, JObject entry, Logger? logger)
     {
         var doc = new HtmlDocument();
         doc.Load(file, System.Text.Encoding.UTF8);
@@ -57,7 +57,7 @@ public static class HtmlToJsonConverter
             $"//article[@{ConversionConstants.RefContentTypeAttr}='{contentTypeId}' and @{ConversionConstants.RefEntryIdAttr}='{entryId}']");
 
         if (articleNode is null)
-            return [];
+            return new EntryImportReport();
 
         var tempDoc = new HtmlDocument();
         tempDoc.LoadHtml($"<body>{articleNode.InnerHtml}</body>");
@@ -73,9 +73,10 @@ public static class HtmlToJsonConverter
         }
     }
 
-    private static List<string> ApplyHtmlToEntry(HtmlDocument doc, JObject entry, Logger? logger)
+    private static EntryImportReport ApplyHtmlToEntry(HtmlDocument doc, JObject entry, Logger? logger)
     {
-        var errors = new List<string>();
+        var report = new EntryImportReport();
+        var errors = report.Errors;
 
         var entryNodes = doc.DocumentNode.Descendants()
             .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null &&
@@ -109,7 +110,8 @@ public static class HtmlToJsonConverter
 
             if (arrayToken == null)
             {
-                logger?.LogWarning.Invoke($"Path {path} not found or is not an array in the entry", null);
+                Report(errors, logger,
+                    $"Field '{path}' was not imported: it does not exist as a list in the entry being updated.");
                 continue;
             }
 
@@ -117,7 +119,8 @@ public static class HtmlToJsonConverter
 
             if (multipleItems.Count != arrayToken.Count)
             {
-                logger?.LogWarning.Invoke($"Mismatch in array lengths for path {path}. HTML has {multipleItems.Count} items, JSON has {arrayToken.Count} items", null);
+                Report(errors, logger,
+                    $"Field '{path}': the file carries {multipleItems.Count} items but the entry has {arrayToken.Count}. Only the first {Math.Min(multipleItems.Count, arrayToken.Count)} were imported.");
             }
 
             for (int i = 0; i < Math.Min(multipleItems.Count, arrayToken.Count); i++)
@@ -130,28 +133,46 @@ public static class HtmlToJsonConverter
             }
         }
 
-        entryNodes.ForEach(x =>
+        foreach (var node in entryNodes)
         {
-            var path = x.Attributes[ConversionConstants.PathAttr].Value!;
+            var path = node.Attributes[ConversionConstants.PathAttr].Value!;
 
-            if (x.Attributes[ConversionConstants.BlackbirdFieldType]?.Value == ConversionConstants.FileFieldType)
+            if (node.Attributes[ConversionConstants.BlackbirdFieldType]?.Value == ConversionConstants.FileFieldType)
             {
-                var uid = x.Attributes[ConversionConstants.BlackbirdFileUid]?.Value;
+                var uid = node.Attributes[ConversionConstants.BlackbirdFileUid]?.Value;
                 if (!string.IsNullOrEmpty(uid))
                     SetFileUidAtPath(entry, path, uid);
-                return;
+                continue;
             }
 
             var propertyValue = entry.SelectToken(path);
-            if (propertyValue == null)
-                return;
 
             if (propertyValue is JValue jValue)
-                jValue.Value = ExtractValue(x);
-        });
+            {
+                jValue.Value = ExtractValue(node);
+                continue;
+            }
 
-        return errors;
+            if (propertyValue != null || IsContainer(node))
+                continue;
+
+            var value = ExtractValue(node);
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+
+            if (TrySetTokenAtPath(entry, path, new JValue(value), out var failure))
+                report.CreatedFields.Add(path);
+            else
+                Report(errors, logger, failure!);
+        }
+
+        return report;
     }
+
+    private static bool IsContainer(HtmlNode node)
+        => node.Descendants().Any(x => x.Attributes[ConversionConstants.PathAttr] is not null)
+           || node.ChildNodes.Any(x => x.GetAttributeValue("class", string.Empty) is
+               ConversionConstants.MultipleItemClass or ConversionConstants.MultipleComplexItemClass);
 
     private static void ApplyJsonRichText(HtmlNode container, JObject entry, Logger? logger,
         ICollection<string> errors)
@@ -233,85 +254,141 @@ public static class HtmlToJsonConverter
     }
 
     private static void SetFileUidAtPath(JObject entry, string path, string uid)
-        => SetTokenAtPath(entry, path, new JValue(uid));
+        => TrySetTokenAtPath(entry, path, new JValue(uid), out _);
 
     private static void SetTokenAtPath(JObject entry, string path, JToken newValue)
+        => TrySetTokenAtPath(entry, path, newValue, out _);
+
+    private static bool TrySetTokenAtPath(JObject entry, string path, JToken newValue, out string? failure)
     {
+        failure = null;
+
         var existing = entry.SelectToken(path);
         if (existing != null)
         {
             existing.Replace(newValue);
-            return;
+            return true;
         }
 
-        var segments = ParseJPathSegments(path);
+        if (!TryParseJPathSegments(path, out var segments))
+        {
+            failure = $"Field '{path}' was not imported: the file references a field path this app cannot interpret.";
+            return false;
+        }
+
         JToken current = entry;
         for (int i = 0; i < segments.Count - 1; i++)
         {
             var (name, index) = segments[i];
-            if (index.HasValue)
+
+            if (current is not JObject parent)
             {
-                var parent = (JObject)current;
-                if (parent[name] is not JArray arr)
-                {
-                    arr = new JArray();
-                    parent[name] = arr;
-                }
-                while (arr.Count <= index.Value)
-                    arr.Add(new JObject());
-                current = arr[index.Value]!;
+                failure = $"Field '{path}' was not imported: '{name}' cannot be created because the entry holds a value where a group was expected.";
+                return false;
             }
-            else
+
+            if (!index.HasValue)
             {
-                var parent = (JObject)current;
                 if (parent[name] is JObject nested)
-                    current = nested;
-                else
                 {
-                    var created = new JObject();
-                    parent[name] = created;
-                    current = created;
+                    current = nested;
+                    continue;
                 }
+
+                if (parent[name] is not null and not JObject)
+                {
+                    failure = $"Field '{path}' was not imported: '{name}' already holds a value that is not a group.";
+                    return false;
+                }
+
+                var created = new JObject();
+                parent[name] = created;
+                current = created;
+                continue;
             }
+
+            if (parent[name] is not JArray arr || index.Value >= arr.Count)
+            {
+                failure = $"Field '{path}' was not imported: the entry has no item {index.Value} in '{name}'.";
+                return false;
+            }
+
+            if (arr[index.Value] is not JObject item)
+            {
+                failure = $"Field '{path}' was not imported: item {index.Value} of '{name}' is not a group.";
+                return false;
+            }
+
+            current = item;
+        }
+
+        if (current is not JObject container)
+        {
+            failure = $"Field '{path}' was not imported: the entry holds a value where a group was expected.";
+            return false;
         }
 
         var (lastName, lastIndex) = segments[^1];
 
         if (!lastIndex.HasValue)
         {
-            ((JObject)current)[lastName] = newValue;
-            return;
+            container[lastName] = newValue;
+            return true;
         }
 
-        var container = (JObject)current;
         if (container[lastName] is not JArray lastArray)
         {
+            if (container[lastName] is not null)
+            {
+                failure = $"Field '{path}' was not imported: '{lastName}' already holds a value that is not a list.";
+                return false;
+            }
+
             lastArray = new JArray();
             container[lastName] = lastArray;
         }
-        while (lastArray.Count <= lastIndex.Value)
-            lastArray.Add(JValue.CreateNull());
-        lastArray[lastIndex.Value] = newValue;
+
+        if (lastIndex.Value > lastArray.Count)
+        {
+            failure = $"Field '{path}' was not imported: the entry's '{lastName}' list has {lastArray.Count} items, so item {lastIndex.Value} cannot be filled without leaving gaps.";
+            return false;
+        }
+
+        if (lastIndex.Value == lastArray.Count)
+            lastArray.Add(newValue);
+        else
+            lastArray[lastIndex.Value] = newValue;
+
+        return true;
     }
 
-    private static List<(string Name, int? Index)> ParseJPathSegments(string path)
+    private static bool TryParseJPathSegments(string path, out List<(string Name, int? Index)> segments)
     {
-        var segments = new List<(string, int?)>();
+        segments = [];
+
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
         foreach (var segment in path.Split('.'))
         {
             var bracket = segment.IndexOf('[');
-            if (bracket >= 0 && segment.EndsWith(']'))
+            if (bracket < 0)
             {
-                var name = segment[..bracket];
-                var index = int.Parse(segment[(bracket + 1)..^1]);
-                segments.Add((name, index));
-            }
-            else
-            {
+                if (segment.Length == 0)
+                    return false;
+
                 segments.Add((segment, null));
+                continue;
             }
+
+            if (!segment.EndsWith(']') || bracket == 0 ||
+                !int.TryParse(segment[(bracket + 1)..^1], out var index) || index < 0)
+                return false;
+
+            segments.Add((segment[..bracket], index));
         }
-        return segments;
+
+        return segments.Count > 0;
     }
 
     public static (string? ContentTypeId, string? EntryId) ExtractContentTypeAndEntryId(Stream file)

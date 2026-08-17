@@ -76,8 +76,7 @@ public static class JsonToHtmlConverter
             if (x.Multiple && property is JArray propertyArray)
             {
                 var containerNode = doc.CreateElement(HtmlConstants.Div);
-                containerNode.SetAttributeValue(ConversionConstants.PathAttr, x.Uid);
-                containerNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{x.Uid}");
+                SetPathAndKey(containerNode, entryId, ResolvePath(property, x.Uid));
 
                 ApplyMax(containerNode, max);
 
@@ -179,8 +178,7 @@ public static class JsonToHtmlConverter
         }
 
         var contentNode = doc.CreateElement(HtmlConstants.Div);
-        contentNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
-        contentNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{property.Path}");
+        SetPathAndKey(contentNode, entryId, ResolvePath(property, entryProperty.Uid));
         contentNode.SetAttributeValue(ConversionConstants.BlackbirdFieldType, ConversionConstants.HtmlFieldType);
         ApplyMax(contentNode, max);
 
@@ -191,6 +189,15 @@ public static class JsonToHtmlConverter
     // The shape check stays as a fallback for schemas that carry no field metadata.
     private static bool IsHtmlValue(EntryProperty entryProperty, string value)
         => entryProperty.IsHtmlRichText || (value.StartsWith('<') && value.EndsWith('>'));
+
+    private static void SetPathAndKey(HtmlNode node, string entryId, string path)
+    {
+        node.SetAttributeValue(ConversionConstants.PathAttr, path);
+        node.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{path}");
+    }
+
+    private static string ResolvePath(JToken token, string uid)
+        => string.IsNullOrEmpty(token.Path) ? uid : token.Path;
 
     private static void ApplyMax(HtmlNode node, int? max)
     {
@@ -229,8 +236,7 @@ public static class JsonToHtmlConverter
 
         if (!string.IsNullOrEmpty(property.Path))
         {
-            richTextNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
-            richTextNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{property.Path}");
+            SetPathAndKey(richTextNode, entryId, property.Path);
             richTextNode.SetAttributeValue(ConversionConstants.BlackbirdJsonValue, EncodeJsonValue(property));
         }
 
@@ -274,10 +280,8 @@ public static class JsonToHtmlConverter
         if (string.IsNullOrEmpty(uid))
             return;
 
-        var path = string.IsNullOrEmpty(property.Path) ? entryProperty.Uid : property.Path;
         var contentNode = doc.CreateElement(HtmlConstants.Div);
-        contentNode.SetAttributeValue(ConversionConstants.PathAttr, path);
-        contentNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{path}");
+        SetPathAndKey(contentNode, entryId, ResolvePath(property, entryProperty.Uid));
         contentNode.SetAttributeValue(ConversionConstants.BlackbirdFieldType, ConversionConstants.FileFieldType);
         contentNode.SetAttributeValue(ConversionConstants.BlackbirdFileUid, uid);
         parentNode.AppendChild(contentNode);
@@ -298,8 +302,7 @@ public static class JsonToHtmlConverter
         int? max = null, string? fieldType = null)
     {
         var contentNode = doc.CreateElement(htmlTag);
-        contentNode.SetAttributeValue(ConversionConstants.PathAttr, property.Path);
-        contentNode.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{property.Path}");
+        SetPathAndKey(contentNode, entryId, property.Path);
 
         if (fieldType is not null)
             contentNode.SetAttributeValue(ConversionConstants.BlackbirdFieldType, fieldType);
@@ -396,8 +399,7 @@ public static class JsonToHtmlConverter
             return;
 
         var groupContainer = doc.CreateElement(HtmlConstants.Div);
-        groupContainer.SetAttributeValue(ConversionConstants.PathAttr, entryProperty.Uid);
-        groupContainer.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{entryProperty.Uid}");
+        SetPathAndKey(groupContainer, entryId, ResolvePath(groupProperty, entryProperty.Uid));
 
         if (max.HasValue)
         {
