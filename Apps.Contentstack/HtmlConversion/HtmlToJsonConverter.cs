@@ -117,10 +117,10 @@ public static class HtmlToJsonConverter
 
             var multipleItems = node.SelectNodes($"./div[@class='{ConversionConstants.MultipleItemClass}']").ToList();
 
-            if (multipleItems.Count != arrayToken.Count)
+            if (multipleItems.Count > arrayToken.Count)
             {
                 Report(errors, logger,
-                    $"Field '{path}': the file carries {multipleItems.Count} items but the entry has {arrayToken.Count}. Only the first {Math.Min(multipleItems.Count, arrayToken.Count)} were imported.");
+                    $"Field '{path}': the file carries {multipleItems.Count} items but the entry has {arrayToken.Count}. Only the first {arrayToken.Count} were imported.");
             }
 
             for (int i = 0; i < Math.Min(multipleItems.Count, arrayToken.Count); i++)
@@ -131,6 +131,26 @@ public static class HtmlToJsonConverter
                 else
                     arrayToken[i] = itemValue;
             }
+
+            while (arrayToken.Count > multipleItems.Count)
+                arrayToken.RemoveAt(arrayToken.Count - 1);
+        }
+
+        var complexRepeatableNodes = entryNodes
+            .Where(x => x.SelectNodes($"./div[@class='{ConversionConstants.MultipleComplexItemClass}']") is { Count: > 0 })
+            .ToList();
+
+        foreach (var node in complexRepeatableNodes)
+        {
+            var path = node.Attributes[ConversionConstants.PathAttr].Value!;
+
+            if (entry.SelectToken(path) is not JArray arrayToken)
+                continue;
+
+            var htmlItemCount = node.SelectNodes($"./div[@class='{ConversionConstants.MultipleComplexItemClass}']").Count;
+
+            while (arrayToken.Count > htmlItemCount)
+                arrayToken.RemoveAt(arrayToken.Count - 1);
         }
 
         foreach (var node in entryNodes)
