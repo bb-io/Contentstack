@@ -355,7 +355,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return new()
         {
             Uid = input.Property,
-            Value = entry.Descendants().First(x => x.Parent is JProperty prop && prop.Name == input.Property).ToString()
+            Value = EntryPropertyResolver.GetValue<string>(entry, input.Property, input.EntryId, locale.Locale)
         };
     }
 
@@ -369,8 +369,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return new()
         {
             Uid = input.Property,
-            Value = entry.Descendants().First(x => x.Parent is JProperty prop && prop.Name == input.Property)
-                .ToObject<decimal>()
+            Value = EntryPropertyResolver.GetValue<decimal>(entry, input.Property, input.EntryId, locale.Locale)
         };
     }
 
@@ -384,8 +383,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return new()
         {
             Uid = input.Property,
-            Value = entry.Descendants().First(x => x.Parent is JProperty prop && prop.Name == input.Property)
-                .ToObject<DateTime>()
+            Value = EntryPropertyResolver.GetValue<DateTime>(entry, input.Property, input.EntryId, locale.Locale)
         };
     }
 
@@ -399,8 +397,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return new()
         {
             Uid = input.Property,
-            Value = entry.Descendants().First(x => x.Parent is JProperty prop && prop.Name == input.Property)
-                .ToObject<bool>()
+            Value = EntryPropertyResolver.GetValue<bool>(entry, input.Property, input.EntryId, locale.Locale)
         };
     }
 
@@ -721,11 +718,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     private async Task SetEntryProperty<T>(string contentTypeId, string entryId, string property, T value,
         string? locale = default)
     {
-        var entryObject = await GetEntryJObject(contentTypeId, entryId);
+        var entryObject = await GetEntryJObject(contentTypeId, entryId, locale);
 
-        var propertyValue = entryObject.Descendants()
-            .First(x => x.Parent is JProperty prop && prop.Name == property) as JValue;
-        propertyValue!.Value = value;
+        if (!EntryPropertyResolver.TrySetExistingValue(entryObject, property, value, entryId, locale))
+        {
+            var contentType = await GetContentType(contentTypeId);
+            EntryPropertyResolver.CreateTopLevelValue(entryObject, contentType.Schema, property, value, entryId,
+                locale);
+        }
 
         await UpdateEntry(contentTypeId, entryId, entryObject, locale);
     }
