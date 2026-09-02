@@ -18,6 +18,11 @@ internal static class RichTextRenderer
         "br", "hr", "img"
     };
 
+    private static readonly HashSet<string> InlineTags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "a", "span", "code"
+    };
+
     private static readonly (string Mark, string Tag)[] TextMarks =
     [
         ("bold", "strong"),
@@ -55,6 +60,10 @@ internal static class RichTextRenderer
         var element = doc.CreateElement(tag);
 
         ApplyAttributes(element, tag, node["attrs"] as JObject);
+
+        if (!InlineTags.Contains(tag) && !VoidTags.Contains(tag) && !string.IsNullOrEmpty(node.Path))
+            JsonToHtmlConverter.SetKey(element, entryId, node.Path);
+
         parent.AppendChild(element);
 
         Render(entryId, doc, VoidTags.Contains(tag) ? parent : element, node["children"], max);

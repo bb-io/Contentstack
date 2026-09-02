@@ -46,6 +46,8 @@ public static class JsonToHtmlConverter
                 }
             }
 
+            KeepKeysOnContentUnitsOnly(doc.DocumentNode);
+
             return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
         }
         catch (Exception ex)
@@ -89,6 +91,7 @@ public static class JsonToHtmlConverter
                         itemContainer.SetAttributeValue("class", ConversionConstants.MultipleItemClass);
                         itemContainer.SetAttributeValue(ConversionConstants.BlackbirdFieldType,
                             ConversionConstants.HtmlFieldType);
+                        SetKey(itemContainer, entryId, item.Path);
                         itemContainer.InnerHtml = item.ToString();
                     }
                     else
@@ -192,8 +195,25 @@ public static class JsonToHtmlConverter
 
     private static void SetPathAndKey(HtmlNode node, string entryId, string path)
     {
-        node.SetAttributeValue(ConversionConstants.PathAttr, path);
-        node.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{path}");
+        SetPath(node, path);
+        SetKey(node, entryId, path);
+    }
+
+    private static void SetPath(HtmlNode node, string path)
+        => node.SetAttributeValue(ConversionConstants.PathAttr, path);
+
+    internal static void SetKey(HtmlNode node, string entryId, string path)
+        => node.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{path}");
+
+    private static bool HasKey(HtmlNode node)
+        => node.Attributes[ConversionConstants.BlackbirdKey] is not null;
+
+    private static void KeepKeysOnContentUnitsOnly(HtmlNode root)
+    {
+        root.DescendantsAndSelf()
+            .Where(x => HasKey(x) && x.Descendants().Any(HasKey))
+            .ToList()
+            .ForEach(x => x.Attributes.Remove(ConversionConstants.BlackbirdKey));
     }
 
     private static string ResolvePath(JToken token, string uid)
@@ -302,10 +322,13 @@ public static class JsonToHtmlConverter
         int? max = null, string? fieldType = null)
     {
         var contentNode = doc.CreateElement(htmlTag);
-        SetPathAndKey(contentNode, entryId, property.Path);
+        SetPath(contentNode, property.Path);
 
         if (fieldType is not null)
             contentNode.SetAttributeValue(ConversionConstants.BlackbirdFieldType, fieldType);
+
+        if (fieldType != ConversionConstants.RichTextNodeFieldType)
+            SetKey(contentNode, entryId, property.Path);
 
         if (max.HasValue)
         {
