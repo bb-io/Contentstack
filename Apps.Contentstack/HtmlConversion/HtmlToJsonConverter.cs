@@ -258,9 +258,11 @@ public static class HtmlToJsonConverter
         
         if (leaves.Count == 0)
         {
-            Report(errors, logger,
-                $"Rich text field '{fieldPath}' was left unchanged: the file no longer marks which text belongs to "
-                + "which part of the field, which happens when a CAT tool flattens the file's inline markup.");
+            if (HasTranslatableText(source))
+                Report(errors, logger,
+                    $"Rich text field '{fieldPath}' was left unchanged: the file no longer marks which text belongs to "
+                    + "which part of the field, which happens when a CAT tool flattens the file's inline markup.");
+
             return;
         }
 
@@ -299,6 +301,10 @@ public static class HtmlToJsonConverter
         SetTokenAtPath(entry, fieldPath, source);
     }
 
+    private static bool HasTranslatableText(JToken source)
+        => source.SelectTokens("$..text")
+            .Any(x => x.Type == JTokenType.String && !string.IsNullOrWhiteSpace(x.Value<string>()));
+
     private static string? ToRelativePath(string fieldPath, string path)
     {
         if (path == fieldPath)
@@ -328,8 +334,8 @@ public static class HtmlToJsonConverter
                 return node.InnerHtml.Trim();
         }
         
-        var text = node.Name == HtmlConstants.Span ? node.InnerText : node.InnerText.Trim();
-        return HttpUtility.HtmlDecode(text);
+        var innerHtml = node.Name == HtmlConstants.Span ? node.InnerHtml : node.InnerHtml.Trim();
+        return HttpUtility.HtmlDecode(innerHtml);
     }
 
     private static void SetFileUidAtPath(JObject entry, string path, string uid)
