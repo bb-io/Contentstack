@@ -564,9 +564,12 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             throw new PluginMisconfigurationException("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
         var entry = await GetEntryJObject(contentTypeId, entryId, input.Locale);
+        var entryBeforeImport = (JObject)entry.DeepClone();
 
         var report = HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
         var errors = report.Errors;
+
+        GuardEntryPayload(entryId, entryBeforeImport, entry, errors);
 
         await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
@@ -580,8 +583,10 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 try
                 {
                     var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
+                    var refEntryBeforeImport = (JObject)refEntry.DeepClone();
                     memoryStream.Position = 0;
                     report.Add(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId, refEntryId, refEntry, InvocationContext.Logger));
+                    GuardEntryPayload(refEntryId, refEntryBeforeImport, refEntry, report.Errors);
                     await UpdateEntry(refContentTypeId, refEntryId, refEntry, input.Locale);
                 }
                 catch (Exception ex)
@@ -728,6 +733,28 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         }
 
         await UpdateEntry(contentTypeId, entryId, entryObject, locale);
+    }
+
+    private void GuardEntryPayload(string entryId, JObject before, JObject after, ICollection<string> errors)
+    {
+        foreach (var warning in EntryPayloadValidator.Inspect(before, after))
+        {
+            errors.Add(warning);
+            InvocationContext.Logger?.LogWarning.Invoke(warning, null);
+        }
+
+        var violations = EntryPayloadValidator.Validate(before, after);
+        if (violations.Count == 0)
+            return;
+
+        InvocationContext.Logger?.LogError.Invoke(
+            $"Refused to update entry {entryId}: {string.Join(" ", violations)}", null);
+
+        throw new PluginApplicationException(
+            $"Entry {entryId} was not updated because the uploaded file is missing field markers this app needs "
+            + "to place the translated content. This usually means the file was produced by an outdated version of "
+            + "this app. Please update the app, run 'Download entry content' again to get a new file, and translate "
+            + $"that one. Details: {string.Join(" ", violations)}");
     }
 
     private async Task UpdateEntry(string contentTypeId, string entryId, JObject entryObject, string? locale = default)

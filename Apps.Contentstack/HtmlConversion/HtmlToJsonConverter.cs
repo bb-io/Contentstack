@@ -13,6 +13,10 @@ public static class HtmlToJsonConverter
     private const string ContentTypeMetaTag = "blackbird-content-type-id";
     private const string EntryMetaTag = "blackbird-entry-id";
 
+    private const string OutdatedFileHint =
+        "The file looks like it was produced by an outdated version of this app; update the app and run "
+        + "'Download entry content' again to get a file this version can import.";
+
     public static EntryImportReport UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger)
     {
         var doc = new HtmlDocument();
@@ -83,6 +87,8 @@ public static class HtmlToJsonConverter
                         !x.Ancestors().Any(a => a.Name == "article"))
             .ToList();
 
+        MatchBlockListLength(entry, entryNodes);
+
         var jsonRichTextNodes = entryNodes
             .Where(x => x.Attributes[ConversionConstants.BlackbirdJsonValue] is not null)
             .ToList();
@@ -126,6 +132,16 @@ public static class HtmlToJsonConverter
             for (int i = 0; i < Math.Min(multipleItems.Count, arrayToken.Count); i++)
             {
                 var itemValue = ExtractValue(multipleItems[i]);
+
+                if (TransportMarker.IsPresentIn(itemValue))
+                {
+                    Report(errors, logger,
+                        $"Field '{path}': item {i} was not imported because the file carries this app's field "
+                        + $"markers as text instead of content. {OutdatedFileHint} "
+                        + $"({TransportMarker.Describe(itemValue)})");
+                    continue;
+                }
+
                 if (arrayToken[i] is JValue jValue)
                     jValue.Value = itemValue;
                 else
@@ -136,22 +152,7 @@ public static class HtmlToJsonConverter
                 arrayToken.RemoveAt(arrayToken.Count - 1);
         }
 
-        var complexRepeatableNodes = entryNodes
-            .Where(x => x.SelectNodes($"./div[@class='{ConversionConstants.MultipleComplexItemClass}']") is { Count: > 0 })
-            .ToList();
-
-        foreach (var node in complexRepeatableNodes)
-        {
-            var path = node.Attributes[ConversionConstants.PathAttr].Value!;
-
-            if (entry.SelectToken(path) is not JArray arrayToken)
-                continue;
-
-            var htmlItemCount = node.SelectNodes($"./div[@class='{ConversionConstants.MultipleComplexItemClass}']").Count;
-
-            while (arrayToken.Count > htmlItemCount)
-                arrayToken.RemoveAt(arrayToken.Count - 1);
-        }
+        var scalarPaths = ScalarPaths(entryNodes);
 
         foreach (var node in entryNodes)
         {
@@ -165,19 +166,27 @@ public static class HtmlToJsonConverter
                 continue;
             }
 
-            var propertyValue = entry.SelectToken(path);
+            if (!scalarPaths.Contains(path) || IsContainer(node))
+                continue;
 
-            if (propertyValue is JValue jValue)
+            var propertyValue = entry.SelectToken(path);
+            var value = ExtractValue(node);
+
+            if (TransportMarker.IsPresentIn(value))
             {
-                jValue.Value = ExtractValue(node);
+                Report(errors, logger,
+                    $"Field '{path}' was not imported: the file carries this app's field markers as text instead "
+                    + $"of translated content. {OutdatedFileHint} ({TransportMarker.Describe(value)})");
                 continue;
             }
 
-            if (propertyValue != null || IsContainer(node))
+            if (propertyValue is JValue jValue)
+            {
+                jValue.Value = value;
                 continue;
+            }
 
-            var value = ExtractValue(node);
-            if (string.IsNullOrWhiteSpace(value))
+            if (propertyValue != null || string.IsNullOrWhiteSpace(value))
                 continue;
 
             if (TrySetTokenAtPath(entry, path, new JValue(value), out var failure))
@@ -188,6 +197,42 @@ public static class HtmlToJsonConverter
 
         return report;
     }
+
+    private static void MatchBlockListLength(JObject entry, IEnumerable<HtmlNode> entryNodes)
+    {
+        foreach (var node in entryNodes)
+        {
+            var items = node.SelectNodes($"./div[@class='{ConversionConstants.MultipleComplexItemClass}']");
+
+            if (items is null || items.Count == 0)
+                continue;
+
+            if (entry.SelectToken(node.Attributes[ConversionConstants.PathAttr].Value!) is not JArray blocks)
+                continue;
+
+            while (blocks.Count > items.Count)
+                blocks.RemoveAt(blocks.Count - 1);
+
+            while (blocks.Count < items.Count)
+                blocks.Add(new JObject());
+        }
+    }
+
+    private static ISet<string> ScalarPaths(IEnumerable<HtmlNode> nodes)
+    {
+        var paths = nodes
+            .Select(x => x.Attributes[ConversionConstants.PathAttr].Value!)
+            .Where(x => !string.IsNullOrEmpty(x))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return paths.Where(path => !paths.Any(other => IsDescendantPath(other, path)))
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static bool IsDescendantPath(string candidate, string parent)
+        => candidate.Length > parent.Length
+           && candidate.StartsWith(parent, StringComparison.Ordinal)
+           && candidate[parent.Length] is '.' or '[';
 
     private static bool IsContainer(HtmlNode node)
         => node.Descendants().Any(x => x.Attributes[ConversionConstants.PathAttr] is not null)
@@ -212,8 +257,21 @@ public static class HtmlToJsonConverter
             return;
         }
 
-        foreach (var node in container.Descendants()
-                     .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null))
+        var leaves = container.Descendants()
+            .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
+            .ToList();
+        
+        if (leaves.Count == 0)
+        {
+            if (HasTranslatableText(source))
+                Report(errors, logger,
+                    $"Rich text field '{fieldPath}' was left unchanged: the file is missing the markers that say "
+                    + $"which text belongs to which part of the field. {OutdatedFileHint}");
+
+            return;
+        }
+
+        foreach (var node in leaves)
         {
             var path = node.Attributes[ConversionConstants.PathAttr].Value!;
             var relativePath = ToRelativePath(fieldPath, path);
@@ -234,11 +292,24 @@ public static class HtmlToJsonConverter
                 continue;
             }
 
+            if (TransportMarker.IsPresentIn(value))
+            {
+                Report(errors, logger,
+                    $"Rich text field '{fieldPath}': the file carries this app's field markers as text for "
+                    + $"'{path}', so the source text was kept. {OutdatedFileHint} "
+                    + $"({TransportMarker.Describe(value)})");
+                continue;
+            }
+
             target.Value = value;
         }
 
         SetTokenAtPath(entry, fieldPath, source);
     }
+
+    private static bool HasTranslatableText(JToken source)
+        => source.SelectTokens("$..text")
+            .Any(x => x.Type == JTokenType.String && !string.IsNullOrWhiteSpace(x.Value<string>()));
 
     private static string? ToRelativePath(string fieldPath, string path)
     {
@@ -268,7 +339,7 @@ public static class HtmlToJsonConverter
             case ConversionConstants.HtmlFieldType:
                 return node.InnerHtml.Trim();
         }
-
+        
         var innerHtml = node.Name == HtmlConstants.Span ? node.InnerHtml : node.InnerHtml.Trim();
         return HttpUtility.HtmlDecode(innerHtml);
     }
@@ -295,7 +366,24 @@ public static class HtmlToJsonConverter
             failure = $"Field '{path}' was not imported: the file references a field path this app cannot interpret.";
             return false;
         }
+        
+        var draft = (JObject)entry.DeepClone();
 
+        if (!TryCreatePath(draft, path, segments, newValue, out failure))
+            return false;
+
+        var rebuilt = draft.Properties().ToList();
+        entry.RemoveAll();
+        foreach (var property in rebuilt)
+            entry.Add(property.Name, property.Value);
+
+        return true;
+    }
+
+    private static bool TryCreatePath(JObject entry, string path, List<(string Name, int? Index)> segments,
+        JToken newValue, out string? failure)
+    {
+        failure = null;
         JToken current = entry;
         for (int i = 0; i < segments.Count - 1; i++)
         {
