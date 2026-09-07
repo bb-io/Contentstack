@@ -13,6 +13,10 @@ public static class HtmlToJsonConverter
     private const string ContentTypeMetaTag = "blackbird-content-type-id";
     private const string EntryMetaTag = "blackbird-entry-id";
 
+    private const string OutdatedFileHint =
+        "The file looks like it was produced by an outdated version of this app; update the app and run "
+        + "'Download entry content' again to get a file this version can import.";
+
     public static EntryImportReport UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger)
     {
         var doc = new HtmlDocument();
@@ -132,8 +136,9 @@ public static class HtmlToJsonConverter
                 if (TransportMarker.IsPresentIn(itemValue))
                 {
                     Report(errors, logger,
-                        $"Field '{path}': item {i} was not imported because the file carries the app's own field "
-                        + $"markers as text ({TransportMarker.Describe(itemValue)}).");
+                        $"Field '{path}': item {i} was not imported because the file carries this app's field "
+                        + $"markers as text instead of content. {OutdatedFileHint} "
+                        + $"({TransportMarker.Describe(itemValue)})");
                     continue;
                 }
 
@@ -170,8 +175,8 @@ public static class HtmlToJsonConverter
             if (TransportMarker.IsPresentIn(value))
             {
                 Report(errors, logger,
-                    $"Field '{path}' was not imported: the file carries the app's own field markers as text instead of "
-                    + $"translated content, which usually means the CAT tool flattened the file ({TransportMarker.Describe(value)}).");
+                    $"Field '{path}' was not imported: the file carries this app's field markers as text instead "
+                    + $"of translated content. {OutdatedFileHint} ({TransportMarker.Describe(value)})");
                 continue;
             }
 
@@ -260,8 +265,8 @@ public static class HtmlToJsonConverter
         {
             if (HasTranslatableText(source))
                 Report(errors, logger,
-                    $"Rich text field '{fieldPath}' was left unchanged: the file no longer marks which text belongs to "
-                    + "which part of the field, which happens when a CAT tool flattens the file's inline markup.");
+                    $"Rich text field '{fieldPath}' was left unchanged: the file is missing the markers that say "
+                    + $"which text belongs to which part of the field. {OutdatedFileHint}");
 
             return;
         }
@@ -290,8 +295,9 @@ public static class HtmlToJsonConverter
             if (TransportMarker.IsPresentIn(value))
             {
                 Report(errors, logger,
-                    $"Rich text field '{fieldPath}': the file carries the app's own field markers as text for '{path}', "
-                    + $"so the source text was kept ({TransportMarker.Describe(value)}).");
+                    $"Rich text field '{fieldPath}': the file carries this app's field markers as text for "
+                    + $"'{path}', so the source text was kept. {OutdatedFileHint} "
+                    + $"({TransportMarker.Describe(value)})");
                 continue;
             }
 
