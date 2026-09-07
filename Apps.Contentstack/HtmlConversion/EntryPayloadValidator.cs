@@ -1,27 +1,44 @@
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentstack.HtmlConversion;
 
 public static class EntryPayloadValidator
 {
-    public static List<string> Validate(JObject before, JObject after)
+    public static List<string> Validate(JObject before, JObject after, Logger? logger = null)
     {
         var violations = new List<string>();
 
-        CheckNoTransportMarkers(before, after, violations);
-        CheckRichTextFieldsStayDocuments(before, after, violations);
-        CheckBlockInstanceUidsSurvive(before, after, violations);
+        Run(nameof(CheckNoTransportMarkers), () => CheckNoTransportMarkers(before, after, violations), logger);
+        Run(nameof(CheckRichTextFieldsStayDocuments),
+            () => CheckRichTextFieldsStayDocuments(before, after, violations), logger);
+        Run(nameof(CheckBlockInstanceUidsSurvive),
+            () => CheckBlockInstanceUidsSurvive(before, after, violations), logger);
 
         return violations;
     }
 
-    public static List<string> Inspect(JObject before, JObject after)
+    public static List<string> Inspect(JObject before, JObject after, Logger? logger = null)
     {
         var warnings = new List<string>();
 
-        CheckRichTextNodeUidsSurvive(before, after, warnings);
+        Run(nameof(CheckRichTextNodeUidsSurvive),
+            () => CheckRichTextNodeUidsSurvive(before, after, warnings), logger);
 
         return warnings;
+    }
+
+    private static void Run(string check, Action run, Logger? logger)
+    {
+        try
+        {
+            run();
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning.Invoke(
+                $"Entry payload check '{check}' could not read the payload and was skipped: {ex.Message}", null);
+        }
     }
 
     private static void CheckNoTransportMarkers(JObject before, JObject after, ICollection<string> violations)
@@ -51,7 +68,7 @@ public static class EntryPayloadValidator
             if (value is null)
                 continue;
 
-            if (value is JObject document && document["type"]?.Value<string>() == "doc" &&
+            if (value is JObject document && Text(document["type"]) == "doc" &&
                 document["children"] is JArray)
                 continue;
 
@@ -115,7 +132,7 @@ public static class EntryPayloadValidator
 
         foreach (var block in entry.Descendants().OfType<JObject>())
         {
-            var uid = block["_metadata"]?["uid"]?.Value<string>();
+            var uid = Text((block["_metadata"] as JObject)?["uid"]);
 
             if (string.IsNullOrEmpty(uid))
                 continue;
@@ -135,20 +152,23 @@ public static class EntryPayloadValidator
     private static IEnumerable<(string Path, JObject Document)> RichTextDocuments(JObject entry)
         => entry.DescendantsAndSelf()
             .OfType<JObject>()
-            .Where(x => x["type"]?.Value<string>() == "doc" && x["children"] is JArray)
+            .Where(x => Text(x["type"]) == "doc" && x["children"] is JArray)
             .Select(x => (x.Path, x));
 
     private static List<string> NodeUids(JObject document)
         => document.DescendantsAndSelf()
             .OfType<JObject>()
-            .Select(x => x["uid"]?.Value<string>())
+            .Select(x => Text(x["uid"]))
             .Where(x => !string.IsNullOrEmpty(x))
             .ToList()!;
+
+    private static string? Text(JToken? token)
+        => token is JValue { Type: JTokenType.String } value ? (string?)value.Value : null;
 
     private static IEnumerable<JValue> Strings(JObject entry)
         => entry.Descendants().OfType<JValue>().Where(x => x.Type == JTokenType.String);
 
-    private static string Describe(JToken? value)
+    private static string Describe(JToken value)
         => value.Type == JTokenType.String ? "text" : value.Type.ToString().ToLowerInvariant();
 
     private static string Join(IEnumerable<string> values) => string.Join(", ", values);

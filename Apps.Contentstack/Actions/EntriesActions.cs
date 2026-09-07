@@ -737,13 +737,25 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
     private void GuardEntryPayload(string entryId, JObject before, JObject after, ICollection<string> errors)
     {
-        foreach (var warning in EntryPayloadValidator.Inspect(before, after))
+        List<string> violations;
+
+        try
         {
-            errors.Add(warning);
-            InvocationContext.Logger?.LogWarning.Invoke(warning, null);
+            foreach (var warning in EntryPayloadValidator.Inspect(before, after, InvocationContext.Logger))
+            {
+                errors.Add(warning);
+                InvocationContext.Logger?.LogWarning.Invoke(warning, null);
+            }
+
+            violations = EntryPayloadValidator.Validate(before, after, InvocationContext.Logger);
+        }
+        catch (Exception ex)
+        {
+            InvocationContext.Logger?.LogWarning.Invoke(
+                $"Entry payload validation for {entryId} could not run and was skipped: {ex}", null);
+            return;
         }
 
-        var violations = EntryPayloadValidator.Validate(before, after);
         if (violations.Count == 0)
             return;
 

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Web;
 using Apps.Contentstack.HtmlConversion.Constants;
+using Newtonsoft.Json;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using HtmlAgilityPack;
@@ -112,7 +113,7 @@ public static class HtmlToJsonConverter
         foreach (var node in repeatableNodes)
         {
             var path = node.Attributes[ConversionConstants.PathAttr].Value!;
-            var arrayToken = entry.SelectToken(path) as JArray;
+            var arrayToken = Resolve(entry, path) as JArray;
 
             if (arrayToken == null)
             {
@@ -169,7 +170,7 @@ public static class HtmlToJsonConverter
             if (!scalarPaths.Contains(path) || IsContainer(node))
                 continue;
 
-            var propertyValue = entry.SelectToken(path);
+            var propertyValue = Resolve(entry, path);
             var value = ExtractValue(node);
 
             if (TransportMarker.IsPresentIn(value))
@@ -207,7 +208,7 @@ public static class HtmlToJsonConverter
             if (items is null || items.Count == 0)
                 continue;
 
-            if (entry.SelectToken(node.Attributes[ConversionConstants.PathAttr].Value!) is not JArray blocks)
+            if (Resolve(entry, node.Attributes[ConversionConstants.PathAttr].Value!) is not JArray blocks)
                 continue;
 
             while (blocks.Count > items.Count)
@@ -233,6 +234,18 @@ public static class HtmlToJsonConverter
         => candidate.Length > parent.Length
            && candidate.StartsWith(parent, StringComparison.Ordinal)
            && candidate[parent.Length] is '.' or '[';
+
+    private static JToken? Resolve(JToken token, string path)
+    {
+        try
+        {
+            return token.SelectToken(path);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     private static bool IsContainer(HtmlNode node)
         => node.Descendants().Any(x => x.Attributes[ConversionConstants.PathAttr] is not null)
@@ -276,7 +289,7 @@ public static class HtmlToJsonConverter
             var path = node.Attributes[ConversionConstants.PathAttr].Value!;
             var relativePath = ToRelativePath(fieldPath, path);
 
-            if (relativePath is null || source.SelectToken(relativePath) is not JValue target)
+            if (relativePath is null || Resolve(source, relativePath) is not JValue target)
             {
                 Report(errors, logger,
                     $"Rich text field '{fieldPath}': the file carries text for '{path}', which does not exist in the exported source value. That text was not imported.");
@@ -354,7 +367,7 @@ public static class HtmlToJsonConverter
     {
         failure = null;
 
-        var existing = entry.SelectToken(path);
+        var existing = Resolve(entry, path);
         if (existing != null)
         {
             existing.Replace(newValue);
