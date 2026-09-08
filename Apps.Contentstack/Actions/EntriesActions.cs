@@ -621,7 +621,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             result.Content = await fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
         }
         else
-        {
+        { 
             result.Content = input.Content;
         }
 
@@ -832,7 +832,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         return response.ContentType;
     }
 
-    private static void DowngradeFilePropertyByName(JToken token, string propertyName)
+    internal static void DowngradeFilePropertyByName(JToken token, string propertyName)
     {
         if (token is JArray array)
         {
@@ -849,11 +849,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             target.Value = DowngradeFileValue(target.Value);
 
         foreach (var child in obj.Properties())
-        {
-            if (child.Name == propertyName)
-                continue;
             DowngradeFilePropertyByName(child.Value, propertyName);
-        }
     }
 
     private static JToken DowngradeFileValue(JToken value)
