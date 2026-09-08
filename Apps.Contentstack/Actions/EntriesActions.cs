@@ -621,7 +621,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             result.Content = await fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
         }
         else
-        {
+        { 
             result.Content = input.Content;
         }
 
