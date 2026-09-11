@@ -13,19 +13,38 @@ Contentstack is a headless CMS technology assembled from a series of best-of-bre
 Before you can connect you need to make sure that:
 
 - You have a Contentstack _Stack API key_: Go to your Contentstack _Stack settings_ and copy API key from the _API Credentials_ section
-- You have a Contentstack _Management token_: On the settings page go to _Tokens_, select _Management Tokens_ section and generate API management token with the parameters you need.
+- You have a Contentstack _Management token_: On the settings page go to _Tokens_, select _Management Tokens_ section 
+and generate API management token with the parameters you need. 
+  - If you're planning to use the branch-scoped connection type, also select the required branches 
+  in the _Scope_ section of the token generation page.
 
 ## Connecting
 
-1. Navigate to apps and search for Contentstack.
-2. Click _Add Connection_.
-3. Name your connection for future reference e.g. 'My contentstack connection'.
-4. In the _Host region_ field, select your Contentstack region.
-5. Fill in the _Stack API key_ and  _Management token_
-6. Click _Connect_.
-7. Confirm that the connection has appeared and the status is _Connected_.
+Navigate to apps and search for Contentstack. Click _Add Connection_ and 
+name your connection for future reference e.g. 'My Contentstack connection'.
 
-![1733749434672](image/README/1733749434672.png)
+### Developer API key
+
+> **Note**: by default, this connection type operates on the stack's `main` branch.
+
+1. In the _Host region_ field, select your Contentstack region.
+2. Fill in the _Stack API key_ and _Management token_
+3. Click _Connect_.
+4. Confirm that the connection has appeared and the status is _Connected_.
+
+![Connecting using the 'Developer API key' connection type](image/README/apikey.png)
+
+### Developer API key (branch-scoped)
+
+> **Note**: use this connection type to access one specific branch.
+
+1. In the _Host region_ field, select your Contentstack region.
+2. Fill in the _Stack API key_ and _Management token_.
+3. Input your branch name. 
+4. Click _Connect_.
+5. Confirm that the connection has appeared and the status is _Connected_.
+
+![Connecting using the 'Developer API key (branch-scoped)' connection type](image/README/apikey_branch.png)
 
 ## Actions
 
