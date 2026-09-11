@@ -11,7 +11,13 @@ public class ContentstackRequest(string resource, Method method, IEnumerable<Aut
 {
     protected override void AddAuth(IEnumerable<AuthenticationCredentialsProvider> creds)
     {
-        this.AddHeader("api_key", creds.Get(CredsNames.StackApiKey).Value);
-        this.AddHeader("authorization", creds.Get(CredsNames.ManagementToken).Value);
+        var credsList = creds.ToList();
+        
+        this.AddHeader("api_key", credsList.Get(CredsNames.StackApiKey).Value);
+        this.AddHeader("authorization", credsList.Get(CredsNames.ManagementToken).Value);
+
+        string? branch = credsList.FirstOrDefault(x => x.KeyName == CredsNames.BranchName)?.Value;
+        if (!string.IsNullOrWhiteSpace(branch))
+            this.AddHeader("branch", branch);
     }
 }

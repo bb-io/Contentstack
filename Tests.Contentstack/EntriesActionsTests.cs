@@ -4,17 +4,18 @@ using Apps.Contentstack.Models.Request;
 using Apps.Contentstack.Models.Request.Entry;
 using Apps.Contentstack.Models.Request.Workflow;
 using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Tests.Contentstack;
 
 [TestClass]
-public class EntriesActionsTests : TestBase
+public class EntriesActionsTests : TestBaseMultipleConnections
 {
-    [TestMethod]
-    public async Task ReplaceEntryAssets_IsSuccess()
+    [TestMethod, TargetConnections]
+    public async Task ReplaceEntryAssets_IsSuccess(InvocationContext invocationContext)
     {
         // Arrange
-        var actions = new EntriesActions(InvocationContext, FileManager);
+        var actions = new EntriesActions(invocationContext, FileManager);
         var entryInput = new EntryRequest
         {
             ContentTypeId = "test",
@@ -29,131 +30,142 @@ public class EntriesActionsTests : TestBase
         // Act
         await actions.ReplaceEntryAssets(entryInput, replaceInput, null);
     }
-    
-    [TestMethod]
-    public async Task GetEntry_WithValidEntryIdAndContentType_ReturnsEntryObject()
+
+    [TestMethod, TargetConnections]
+    public async Task GetEntry_WithValidEntryIdAndContentType_ReturnsEntryObject(InvocationContext invocationContext)
     {
-        var action = new EntriesActions(InvocationContext, FileManager);
+        // Arrange
+        var actions = new EntriesActions(invocationContext, FileManager);
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "page",
             ContentId = "blt3722af2e4979b90a"
         };
-        var localeRequest = new LocaleRequest { };
-        var fileRequest = new FileExtensionRequest { };
 
-        var result = await action.GetEntry(entryRequest, localeRequest, fileRequest);
+        // Act
+        var result = await actions.GetEntry(entryRequest, new LocaleRequest(), new FileExtensionRequest());
 
-        var json = Newtonsoft.Json.JsonConvert.SerializeObject(result);
-        Console.WriteLine(json);
-
-        Console.WriteLine(result.ContentId);
-        Console.WriteLine(result.Locale);
+        // Assert
+        PrintResult(result);
         Assert.IsNotNull(result);
         Assert.AreEqual(entryRequest.ContentTypeId, result.ContentTypeId);
     }
 
-    [TestMethod]
-    public async Task DownloadEntryContent_ReturnsHtmlContent()
+    [TestMethod, TargetConnections]
+    public async Task DownloadEntryContent_ReturnsHtmlContent(InvocationContext invocationContext)
     {
-        var action = new EntriesActions(InvocationContext, FileManager);
+        // Arrange
+        var actions = new EntriesActions(invocationContext, FileManager);
         var entryRequest = new DownloadEntryRequest
         {
             ContentTypeId = "page",
             ContentId = "blt3722af2e4979b90a",
             IncludeReferencedEntryUids = true
         };
-        var localeRequest = new LocaleRequest
-        {
-            //Locale = "en"
-        };
 
-        var result = await action.GetEntryAsHtml(entryRequest, localeRequest);
-        
-        Console.WriteLine(result.Content.Name);
-        Console.WriteLine(string.Join(", ", result.ReferencedEntryUids ?? []));
+        // Act
+        var result = await actions.GetEntryAsHtml(entryRequest, new LocaleRequest());
+
+        // Assert
+        TestContext.WriteLine(result.Content.Name);
+        TestContext.WriteLine(string.Join(", ", result.ReferencedEntryUids ?? []));
         Assert.IsNotNull(result.Content);
     }
 
-    [TestMethod]
-    public async Task UploadEntryContent_IsSuccess()
+    [TestMethod, TargetConnections]
+    public async Task UploadEntryContent_IsSuccess(InvocationContext invocationContext)
     {
-        var action = new EntriesActions(InvocationContext, FileManager);
-        var fileReference = new FileReference { Name = "test.html" };
-        var request = new UploadEntryRequest { Content = fileReference };
+        // Arrange
+        var actions = new EntriesActions(invocationContext, FileManager);
+        var request = new UploadEntryRequest { Content = new FileReference { Name = "test.html" } };
 
         // Act
-        var result = await action.UpdateEntryFromHtml(request);
+        var result = await actions.UpdateEntryFromHtml(request);
 
         // Assert
+        PrintResult(result);
         Assert.IsNotNull(result);
     }
 
-    [TestMethod]
-    public async Task AddTagToEntry_WithValidTagAndEntry_ReturnsUpdatedEntry()
+    [TestMethod, TargetConnections]
+    public async Task AddTagToEntry_WithValidTagAndEntry_ReturnsUpdatedEntry(InvocationContext invocationContext)
     {
-        var action = new EntriesActions(InvocationContext, FileManager);
+        // Arrange
+        var actions = new EntriesActions(invocationContext, FileManager);
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "missions",
             ContentId = "bltb0b17fd01c287e55"
         };
-        var localeRequest = new LocaleRequest { };
-        var fileRequest = new FileExtensionRequest { };
 
-        var result = await action.AddTagToEntry(entryRequest, "insights explore toolkit2", localeRequest);
+        // Act
+        var result = await actions.AddTagToEntry(entryRequest, "insights explore toolkit2", new LocaleRequest());
+
+        // Assert
+        PrintResult(result);
         Assert.IsNotNull(result);
     }
 
-    [TestMethod]
-    public async Task RemoveTagFromEntry_WithValidTagAndEntry_ReturnsUpdatedEntry()
+    [TestMethod, TargetConnections]
+    public async Task RemoveTagFromEntry_WithValidTagAndEntry_ReturnsUpdatedEntry(InvocationContext invocationContext)
     {
-        var action = new EntriesActions(InvocationContext, FileManager);
+        // Arrange
+        var actions = new EntriesActions(invocationContext, FileManager);
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "missions",
             ContentId = "bltb0b17fd01c287e55"
         };
-        var localeRequest = new LocaleRequest { };
-        var fileRequest = new FileExtensionRequest { };
 
-        var result = await action.RemoveTagFromEntry(entryRequest, "insights explore toolkit1", localeRequest);
+        // Act
+        var result = await actions.RemoveTagFromEntry(entryRequest, "insights explore toolkit1", new LocaleRequest());
 
+        // Assert
+        PrintResult(result);
         Assert.IsNotNull(result);
     }
 
-    [TestMethod]
-    public async Task GetEntryLocales_WithValidEntry_ReturnsLocaleList()
+    [TestMethod, TargetConnections]
+    public async Task GetEntryLocales_WithValidEntry_ReturnsLocaleList(InvocationContext invocationContext)
     {
-        var action = new EntriesActions(InvocationContext, FileManager);
+        // Arrange
+        var actions = new EntriesActions(invocationContext, FileManager);
         var entryRequest = new EntryRequest
         {
             ContentTypeId = "test-123",
             ContentId = "blt06567cfc9ee0a966"
         };
 
-        var result = await action.GetEntryLocales(entryRequest);
+        // Act
+        var result = await actions.GetEntryLocales(entryRequest);
 
+        // Assert
         PrintResult(result);
         Assert.IsNotNull(result);
         Assert.IsNotNull(result.Locales);
         Assert.IsTrue(result.Locales.Any());
     }
 
-    [TestMethod]
-    public async Task SearchEntries_WithValidFilters_ReturnsMatchingEntries()
+    [TestMethod, TargetConnections]
+    public async Task SearchEntries_WithValidFilters_ReturnsMatchingEntries(InvocationContext invocationContext)
     {
-        var action = new EntriesActions(InvocationContext, FileManager);
-        var searchRequest = new SearchEntriesRequest { ContentTypeIds = new[] { "page" } };
-        var localeRequest = new LocaleRequest { };
-        var workflowRequest = new WorkflowStageFilterRequest { };
-        var tagFilter = new TagFilterRequest { /*Tag = "insights explore toolkit1"*/ };
-        var updatedAtFilter = new UpdatedAtFilterRequest { };
+        // Arrange
+        var actions = new EntriesActions(invocationContext, FileManager);
+        var searchRequest = new SearchEntriesRequest { ContentTypeIds = ["page"] };
 
-        var result = await action.SearchEntries(searchRequest, workflowRequest, localeRequest, tagFilter, updatedAtFilter, null);
+        // Act
+        var result = await actions.SearchEntries(
+            searchRequest,
+            new WorkflowStageFilterRequest(),
+            new LocaleRequest(),
+            new TagFilterRequest(),
+            new UpdatedAtFilterRequest(),
+            null);
+
+        // Assert
         foreach (var item in result.Entries)
         {
-            Console.WriteLine($"{item.ContentId} - {item.Title} - {item.Tags}");
+            TestContext.WriteLine($"{item.ContentId} - {item.Title} - {item.Tags}");
             Assert.IsNotNull(item);
             Assert.AreEqual("page", item.ContentTypeId);
         }

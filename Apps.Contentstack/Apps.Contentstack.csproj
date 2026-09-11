@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Contentstack</Product>
         <Description>Headless CMS that enables users to create, manage, and deliver digital content across various platforms and channels</Description>
-        <Version>1.4.61</Version>
+        <Version>1.4.62</Version>
         <AssemblyName>Apps.Contentstack</AssemblyName>
     </PropertyGroup>
 
@@ -23,12 +23,7 @@
 
     <ItemGroup>
         <EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <EmbeddedResource Include="..\README.md">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </EmbeddedResource>
+        <EmbeddedResource CopyToOutputDirectory="Always" Include="..\README.md"/>
     </ItemGroup>
     
 </Project>

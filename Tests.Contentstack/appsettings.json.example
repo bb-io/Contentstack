@@ -1,8 +1,18 @@
 {
-  "ConnectionDefinition": {
-    "host": "",
-    "stack_api_key": "",
-    "management_token": ""
-  },
+  "ConnectionDefinition": [
+      {
+        "connection_type": "Developer API key",
+        "host": "",
+        "stack_api_key": "",
+        "management_token": ""
+      },
+      {
+        "connection_type": "Developer API key (branch-scoped)",
+        "host": "",
+        "stack_api_key": "",
+        "management_token": "",
+        "branch_name": ""
+      }
+  ],
   "TestFolder": "C:\\Users\\..."
 }
