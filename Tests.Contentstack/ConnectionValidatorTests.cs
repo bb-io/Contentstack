@@ -1,30 +1,46 @@
 using Tests.Contentstack.Base;
 using Apps.Contentstack.Connections;
+using Apps.Contentstack.Constants;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Tests.Contentstack;
 
 [TestClass]
-public class ConnectionValidatorTests : TestBase
+public class ConnectionValidatorTests : TestBaseMultipleConnections
 {
-    [TestMethod]
-    public async Task ValidateConnection_WithValidCredentials_ReturnsValid()
+    [TestMethod, TargetConnections]
+    public async Task ValidateConnection_WithValidCredentials_ReturnsValid(InvocationContext invocationContext)
     {
+        // Arrange
         var validator = new ConnectionValidator();
+        var credentials = invocationContext.AuthenticationCredentialsProviders
+            .Select(x => new AuthenticationCredentialsProvider(x.KeyName, x.Value));
 
-        var result = await validator.ValidateConnection(Creds, CancellationToken.None);
-        Console.WriteLine(result.Message);
+        // Act
+        var result = await validator.ValidateConnection(credentials, CancellationToken.None);
+
+        // Assert
+        TestContext.WriteLine(result.Message);
         Assert.IsTrue(result.IsValid);
     }
 
-    [TestMethod]
-    public async Task ValidateConnection_WithInvalidCredentials_ReturnsInvalid()
+    [TestMethod, TargetConnections]
+    public async Task ValidateConnection_WithInvalidCredentials_ReturnsInvalid(InvocationContext invocationContext)
     {
+        // Arrange
         var validator = new ConnectionValidator();
-
-        var newCreds = Creds.Select(x => new AuthenticationCredentialsProvider(x.KeyName, x.Value + "_incorrect"));
-        var result = await validator.ValidateConnection(newCreds, CancellationToken.None);
-        Console.WriteLine(result.Message);
+    
+        var newCredentials = invocationContext.AuthenticationCredentialsProviders
+            .Select(x => new AuthenticationCredentialsProvider(
+                x.KeyName,
+                x.KeyName == CredsNames.ConnectionType ? x.Value : x.Value + "_incorrect"));
+    
+        // Act
+        var result = await validator.ValidateConnection(newCredentials, CancellationToken.None);
+    
+        // Assert
+        TestContext.WriteLine(result.Message);
         Assert.IsFalse(result.IsValid);
     }
 }
