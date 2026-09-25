@@ -23,4 +23,8 @@ public class UploadEntryRequest : IUploadContentInput
     [Display("Locale")]
     [DataSource(typeof(LanguageDataHandler))]
     public string? Locale { get; set; }
+
+    [Display("Source locale", Description = "Locale the file was translated from. References, assets, numbers, booleans, dates, taxonomies and the list of modular blocks are copied from this locale's entry before the translations are applied. Defaults to the master locale.")]
+    [DataSource(typeof(LanguageDataHandler))]
+    public string? SourceLocale { get; set; }
 }

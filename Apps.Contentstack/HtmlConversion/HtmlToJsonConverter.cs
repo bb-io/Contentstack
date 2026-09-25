@@ -18,14 +18,19 @@ public static class HtmlToJsonConverter
         "The file looks like it was produced by an outdated version of this app; update the app and run "
         + "'Download entry content' again to get a file this version can import.";
 
-    public static EntryImportReport UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger)
+    /// <param name="structureFromSource">
+    /// The entry already carries the source's lists and non-text fields (see <see cref="SourceEntrySync"/>), so the
+    /// file only fills in text: lists keep their length and asset ids in the file are not applied.
+    /// </param>
+    public static EntryImportReport UpdateEntryFromHtml(Stream file, JObject entry, Logger? logger,
+        bool structureFromSource = false)
     {
         var doc = new HtmlDocument();
         doc.Load(file, System.Text.Encoding.UTF8);
 
         try
         {
-            return ApplyHtmlToEntry(doc, entry, logger);
+            return ApplyHtmlToEntry(doc, entry, logger, structureFromSource);
         }
         catch(Exception ex)
         {
@@ -52,7 +57,8 @@ public static class HtmlToJsonConverter
             ?? new List<(string, string)>();
     }
 
-    public static EntryImportReport UpdateReferencedEntryFromHtml(Stream file, string contentTypeId, string entryId, JObject entry, Logger? logger)
+    public static EntryImportReport UpdateReferencedEntryFromHtml(Stream file, string contentTypeId, string entryId,
+        JObject entry, Logger? logger, bool structureFromSource = false)
     {
         var doc = new HtmlDocument();
         doc.Load(file, System.Text.Encoding.UTF8);
@@ -69,7 +75,7 @@ public static class HtmlToJsonConverter
 
         try
         {
-            return ApplyHtmlToEntry(tempDoc, entry, logger);
+            return ApplyHtmlToEntry(tempDoc, entry, logger, structureFromSource);
         }
         catch (Exception ex)
         {
@@ -78,7 +84,8 @@ public static class HtmlToJsonConverter
         }
     }
 
-    private static EntryImportReport ApplyHtmlToEntry(HtmlDocument doc, JObject entry, Logger? logger)
+    private static EntryImportReport ApplyHtmlToEntry(HtmlDocument doc, JObject entry, Logger? logger,
+        bool structureFromSource)
     {
         var report = new EntryImportReport();
         var errors = report.Errors;
@@ -88,7 +95,10 @@ public static class HtmlToJsonConverter
                         !x.Ancestors().Any(a => a.Name == "article"))
             .ToList();
 
-        MatchBlockListLength(entry, entryNodes);
+        if (structureFromSource)
+            ReportListLengthMismatches(entry, entryNodes, errors, logger);
+        else
+            MatchBlockListLength(entry, entryNodes);
 
         var jsonRichTextNodes = entryNodes
             .Where(x => x.Attributes[ConversionConstants.BlackbirdJsonValue] is not null)
@@ -162,7 +172,7 @@ public static class HtmlToJsonConverter
             if (node.Attributes[ConversionConstants.BlackbirdFieldType]?.Value == ConversionConstants.FileFieldType)
             {
                 var uid = node.Attributes[ConversionConstants.BlackbirdFileUid]?.Value;
-                if (!string.IsNullOrEmpty(uid))
+                if (!structureFromSource && !string.IsNullOrEmpty(uid))
                     SetFileUidAtPath(entry, path, uid);
                 continue;
             }
@@ -211,11 +221,47 @@ public static class HtmlToJsonConverter
             if (Resolve(entry, node.Attributes[ConversionConstants.PathAttr].Value!) is not JArray blocks)
                 continue;
 
+            if (IsReferencePlaceholderList(items, blocks))
+                continue;
+
             while (blocks.Count > items.Count)
                 blocks.RemoveAt(blocks.Count - 1);
 
             while (blocks.Count < items.Count)
                 blocks.Add(new JObject());
+        }
+    }
+
+    // Files from earlier versions carry a reference field as one empty item per reference: they tell how many
+    // references there were, not which, so they must not resize the entry's list.
+    private static bool IsReferencePlaceholderList(HtmlNodeCollection items, JArray list)
+        => items.All(x => !CarriesContent(x, includeFiles: true))
+           && (list.Count == 0 || list.Any(x => x is JObject item && item["_content_type_uid"] is not null));
+
+    private static bool CarriesContent(HtmlNode item, bool includeFiles)
+        => item.Descendants().Any(x => x.Attributes[ConversionConstants.PathAttr] is not null
+                                       && (includeFiles || x.Attributes[ConversionConstants.BlackbirdFieldType]?.Value
+                                           != ConversionConstants.FileFieldType));
+
+    private static void ReportListLengthMismatches(JObject entry, IEnumerable<HtmlNode> entryNodes,
+        ICollection<string> errors, Logger? logger)
+    {
+        foreach (var node in entryNodes)
+        {
+            var items = node.SelectNodes($"./div[@class='{ConversionConstants.MultipleComplexItemClass}']");
+
+            if (items is null || items.Count == 0 || !items.Any(x => CarriesContent(x, includeFiles: false)))
+                continue;
+
+            var path = node.Attributes[ConversionConstants.PathAttr].Value!;
+
+            if (Resolve(entry, path) is not JArray list || list.Count == items.Count)
+                continue;
+
+            Report(errors, logger,
+                $"Field '{path}': the file has {items.Count} items but the source entry now has {list.Count}. "
+                + "The source's blocks changed after the file was downloaded, so translations in this list may land "
+                + "in the wrong items. Run 'Download entry content' again and translate the new file.");
         }
     }
 
@@ -398,6 +444,7 @@ public static class HtmlToJsonConverter
     {
         failure = null;
         JToken current = entry;
+        var inListItem = false;
         for (int i = 0; i < segments.Count - 1; i++)
         {
             var (name, index) = segments[i];
@@ -413,6 +460,7 @@ public static class HtmlToJsonConverter
                 if (parent[name] is JObject nested)
                 {
                     current = nested;
+                    inListItem = false;
                     continue;
                 }
 
@@ -422,6 +470,10 @@ public static class HtmlToJsonConverter
                     return false;
                 }
 
+                if (inListItem && IsOtherBlock(parent, name, path, out failure))
+                    return false;
+
+                inListItem = false;
                 var created = new JObject();
                 parent[name] = created;
                 current = created;
@@ -441,6 +493,7 @@ public static class HtmlToJsonConverter
             }
 
             current = item;
+            inListItem = true;
         }
 
         if (current is not JObject container)
@@ -450,6 +503,9 @@ public static class HtmlToJsonConverter
         }
 
         var (lastName, lastIndex) = segments[^1];
+
+        if (inListItem && container[lastName] is null && IsOtherBlock(container, lastName, path, out failure))
+            return false;
 
         if (!lastIndex.HasValue)
         {
@@ -480,6 +536,20 @@ public static class HtmlToJsonConverter
         else
             lastArray[lastIndex.Value] = newValue;
 
+        return true;
+    }
+
+    private static bool IsOtherBlock(JObject item, string name, string path, out string? failure)
+    {
+        failure = null;
+        var keys = item.Properties().Where(x => !x.Name.StartsWith('_')).ToList();
+
+        if (keys.Count != 1 || keys[0].Value is not JObject || keys[0].Name == name)
+            return false;
+
+        failure = $"Field '{path}' was not imported: that item is a '{keys[0].Name}' block in the entry but the "
+                  + $"file has content for a '{name}' block there. The entry's blocks changed after the file was "
+                  + "downloaded; run 'Download entry content' again and translate the new file.";
         return true;
     }
 
