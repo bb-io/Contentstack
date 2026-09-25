@@ -564,14 +564,12 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             throw new PluginMisconfigurationException("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
         var entry = await GetEntryJObject(contentTypeId, entryId, input.Locale);
-
-        if (input.SyncNonTranslatableFields)
-            await SyncFromSourceEntry(contentTypeId, entryId, entry, input.SourceLocale);
+        await SyncFromSourceEntry(contentTypeId, entryId, entry, input.SourceLocale);
 
         var entryBeforeImport = (JObject)entry.DeepClone();
 
         var report = HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger,
-            input.SyncNonTranslatableFields);
+            structureFromSource: true);
         var errors = report.Errors;
 
         GuardEntryPayload(entryId, entryBeforeImport, entry, errors);
@@ -588,14 +586,12 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 try
                 {
                     var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
-
-                    if (input.SyncNonTranslatableFields)
-                        await SyncFromSourceEntry(refContentTypeId, refEntryId, refEntry, input.SourceLocale);
+                    await SyncFromSourceEntry(refContentTypeId, refEntryId, refEntry, input.SourceLocale);
 
                     var refEntryBeforeImport = (JObject)refEntry.DeepClone();
                     memoryStream.Position = 0;
                     report.Add(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId,
-                        refEntryId, refEntry, InvocationContext.Logger, input.SyncNonTranslatableFields));
+                        refEntryId, refEntry, InvocationContext.Logger, structureFromSource: true));
                     GuardEntryPayload(refEntryId, refEntryBeforeImport, refEntry, report.Errors);
                     await UpdateEntry(refContentTypeId, refEntryId, refEntry, input.Locale);
                 }

@@ -444,6 +444,7 @@ public static class HtmlToJsonConverter
     {
         failure = null;
         JToken current = entry;
+        var inListItem = false;
         for (int i = 0; i < segments.Count - 1; i++)
         {
             var (name, index) = segments[i];
@@ -459,6 +460,7 @@ public static class HtmlToJsonConverter
                 if (parent[name] is JObject nested)
                 {
                     current = nested;
+                    inListItem = false;
                     continue;
                 }
 
@@ -468,6 +470,10 @@ public static class HtmlToJsonConverter
                     return false;
                 }
 
+                if (inListItem && IsOtherBlock(parent, name, path, out failure))
+                    return false;
+
+                inListItem = false;
                 var created = new JObject();
                 parent[name] = created;
                 current = created;
@@ -487,6 +493,7 @@ public static class HtmlToJsonConverter
             }
 
             current = item;
+            inListItem = true;
         }
 
         if (current is not JObject container)
@@ -496,6 +503,9 @@ public static class HtmlToJsonConverter
         }
 
         var (lastName, lastIndex) = segments[^1];
+
+        if (inListItem && container[lastName] is null && IsOtherBlock(container, lastName, path, out failure))
+            return false;
 
         if (!lastIndex.HasValue)
         {
@@ -526,6 +536,20 @@ public static class HtmlToJsonConverter
         else
             lastArray[lastIndex.Value] = newValue;
 
+        return true;
+    }
+
+    private static bool IsOtherBlock(JObject item, string name, string path, out string? failure)
+    {
+        failure = null;
+        var keys = item.Properties().Where(x => !x.Name.StartsWith('_')).ToList();
+
+        if (keys.Count != 1 || keys[0].Value is not JObject || keys[0].Name == name)
+            return false;
+
+        failure = $"Field '{path}' was not imported: that item is a '{keys[0].Name}' block in the entry but the "
+                  + $"file has content for a '{name}' block there. The entry's blocks changed after the file was "
+                  + "downloaded; run 'Download entry content' again and translate the new file.";
         return true;
     }
 

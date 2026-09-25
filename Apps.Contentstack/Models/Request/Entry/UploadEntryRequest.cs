@@ -24,10 +24,7 @@ public class UploadEntryRequest : IUploadContentInput
     [DataSource(typeof(LanguageDataHandler))]
     public string? Locale { get; set; }
 
-    [Display("Sync non-translatable fields from source", Description = "If enabled, references, assets, numbers, booleans, dates, taxonomies and the list of modular blocks are copied from the source locale entry before the translations are applied, so the locale matches the source. Any of these fields the locale has changed on its own is overwritten.")]
-    public bool SyncNonTranslatableFields { get; set; }
-
-    [Display("Source locale", Description = "Locale to copy non-translatable fields from when 'Sync non-translatable fields from source' is enabled. Defaults to the master locale.")]
+    [Display("Source locale", Description = "Locale the file was translated from. References, assets, numbers, booleans, dates, taxonomies and the list of modular blocks are copied from this locale's entry before the translations are applied. Defaults to the master locale.")]
     [DataSource(typeof(LanguageDataHandler))]
     public string? SourceLocale { get; set; }
 }

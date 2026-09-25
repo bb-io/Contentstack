@@ -21,8 +21,14 @@ public static class SourceEntrySync
         {
             var uid = field["uid"]?.ToString();
 
-            if (string.IsNullOrEmpty(uid) || Flag(field, "non_localizable"))
+            if (string.IsNullOrEmpty(uid))
                 continue;
+
+            if (Flag(field, "non_localizable"))
+            {
+                Mirror(target, source, uid);
+                continue;
+            }
 
             switch (field["data_type"]?.ToString())
             {
@@ -34,7 +40,7 @@ public static class SourceEntrySync
                     SyncList(target, source, uid, item => BlockSchema(field, item), unwrap: true);
                     break;
 
-                case "group" when Flag(field, "multiple"):
+                case "group" or "global_field" when Flag(field, "multiple"):
                     SyncList(target, source, uid, _ => field["schema"] as JArray, unwrap: false);
                     break;
 
@@ -90,6 +96,7 @@ public static class SourceEntrySync
 
             used.Add(match);
             var item = (JObject)into[match].DeepClone();
+            AdoptInstanceUid(item, (JObject)sourceItem, unwrap);
             var schema = itemSchema((JObject)sourceItem);
 
             if (schema is not null)
@@ -152,6 +159,20 @@ public static class SourceEntrySync
     {
         var type = BlockType(item);
         return type is null ? null : item[type];
+    }
+
+    private static void AdoptInstanceUid(JObject item, JObject sourceItem, bool unwrap)
+    {
+        var uid = InstanceUid(sourceItem);
+        if (uid is null)
+            return;
+
+        var holder = unwrap && Inner(item) is JObject inner && item["_metadata"] is null ? inner : item;
+
+        if (holder["_metadata"] is JObject metadata)
+            metadata["uid"] = uid;
+        else
+            holder["_metadata"] = new JObject { ["uid"] = uid };
     }
 
     // Block items keep their id either on the wrapper or on the block itself.
