@@ -564,9 +564,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             throw new PluginMisconfigurationException("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
         var entry = await GetEntryJObject(contentTypeId, entryId, input.Locale);
+
+        if (input.SyncNonTranslatableFields)
+            await SyncFromSourceEntry(contentTypeId, entryId, entry, input.SourceLocale);
+
         var entryBeforeImport = (JObject)entry.DeepClone();
 
-        var report = HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger);
+        var report = HtmlToJsonConverter.UpdateEntryFromHtml(memoryStream, entry, InvocationContext.Logger,
+            input.SyncNonTranslatableFields);
         var errors = report.Errors;
 
         GuardEntryPayload(entryId, entryBeforeImport, entry, errors);
@@ -583,9 +588,14 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 try
                 {
                     var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
+
+                    if (input.SyncNonTranslatableFields)
+                        await SyncFromSourceEntry(refContentTypeId, refEntryId, refEntry, input.SourceLocale);
+
                     var refEntryBeforeImport = (JObject)refEntry.DeepClone();
                     memoryStream.Position = 0;
-                    report.Add(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId, refEntryId, refEntry, InvocationContext.Logger));
+                    report.Add(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId,
+                        refEntryId, refEntry, InvocationContext.Logger, input.SyncNonTranslatableFields));
                     GuardEntryPayload(refEntryId, refEntryBeforeImport, refEntry, report.Errors);
                     await UpdateEntry(refContentTypeId, refEntryId, refEntry, input.Locale);
                 }
@@ -807,6 +817,15 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             throw new PluginApplicationException(
                 $"Entry update failed. Exception: {ex}; Exception type: {ex.GetType().Name}; Content type schema: {contentTypeObj.Schema}; Entry JSON: {entryObject};");
         }
+    }
+
+    // Without a locale the API returns the entry in the master locale.
+    private async Task SyncFromSourceEntry(string contentTypeId, string entryId, JObject entry, string? sourceLocale)
+    {
+        var contentType = await GetContentType(contentTypeId);
+        var source = await GetEntryJObject(contentTypeId, entryId, sourceLocale);
+
+        SourceEntrySync.Apply(entry, source, contentType.Schema);
     }
 
     private async Task<JObject> GetEntryJObject(string contentTypeId, string entryId, string? locale = default)

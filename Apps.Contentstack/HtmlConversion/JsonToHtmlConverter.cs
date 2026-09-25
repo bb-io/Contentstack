@@ -65,7 +65,7 @@ public static class JsonToHtmlConverter
     {
         contentType.Schema.GetLocalizableFields().ForEach(x =>
         {
-            if (excludedFieldIds.Contains(x.Uid))
+            if (excludedFieldIds.Contains(x.Uid) || x.DataType == "reference")
                 return;
 
             var property = entry[x.Uid];
@@ -444,6 +444,9 @@ public static class JsonToHtmlConverter
             {
                 var nestedProperty = propertySchema.ToObject<EntryProperty>()!;
                 nestedProperty.Uid = property.Name;
+
+                if (nestedProperty.DataType == "reference")
+                    continue;
 
                 if (nestedProperty.Multiple && property.Value is JArray arrayValue)
                 {
