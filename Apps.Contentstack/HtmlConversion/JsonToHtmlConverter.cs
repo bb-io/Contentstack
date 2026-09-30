@@ -23,15 +23,14 @@ public static class JsonToHtmlConverter
         string stackApiKey,
         UserEntity? updatedByUser,
         IEnumerable<string>? excludedFieldIds = null,
-        IEnumerable<ReferencedEntryData>? referencedEntries = null)
+        IEnumerable<ReferencedEntryData>? referencedEntries = null,
+        IEnumerable<string>? syncExcludedFieldIds = null)
     {
         try
         {
-            var (doc, body) = PrepareEmptyHtmlDocument(contentTypeId, entryId, entry, stackApiKey, updatedByUser);
-            var excludedFields = excludedFieldIds?
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x.Trim())
-                .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+            var (doc, body) = PrepareEmptyHtmlDocument(contentTypeId, entryId, entry, stackApiKey, updatedByUser,
+                ToFieldIdSet(syncExcludedFieldIds));
+            var excludedFields = ToFieldIdSet(excludedFieldIds);
             ParseEntryToHtml(entryId, entry, contentType, doc, body, excludedFields);
 
             if (referencedEntries != null)
@@ -349,6 +348,12 @@ public static class JsonToHtmlConverter
     private static string EncodeText(string value)
         => value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
+    private static HashSet<string> ToFieldIdSet(IEnumerable<string>? fieldIds)
+        => fieldIds?
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+
     private static void AddBlackbirdMeta(HtmlDocument htmlDoc, HtmlNode headNode, string name, string? value)
     {
         if (value is null) return;
@@ -359,7 +364,8 @@ public static class JsonToHtmlConverter
     }
 
     private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string contentTypeId,
-        string entryId, JObject entry, string stackApiKey, UserEntity? updatedByUser)
+        string entryId, JObject entry, string stackApiKey, UserEntity? updatedByUser,
+        ICollection<string> syncExcludedFieldIds)
     {
         var locale = entry["locale"]?.Value<string>() ?? "en-us";
         var title = entry["title"]?.Value<string>();
@@ -388,6 +394,8 @@ public static class JsonToHtmlConverter
             $"https://app.contentstack.com/#!/stack/{stackApiKey}/content-type/{contentTypeId}/{locale}/entry/{entryId}/edit");
         AddBlackbirdMeta(htmlDoc, headNode, "system-name", "Contentstack");
         AddBlackbirdMeta(htmlDoc, headNode, "system-ref", "https://www.contentstack.com");
+        AddBlackbirdMeta(htmlDoc, headNode, ConversionConstants.SyncExcludedFieldIdsMeta,
+            syncExcludedFieldIds.Count > 0 ? string.Join(",", syncExcludedFieldIds) : null);
 
         var bodyNode = htmlDoc.CreateElement(HtmlConstants.Body);
 

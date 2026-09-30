@@ -15,4 +15,5 @@ public static class ConversionConstants
     public const string FileFieldType = "file";
     public const string RichTextNodeFieldType = "rich-text-node";
     public const string HtmlFieldType = "rich-text-html";
+    public const string SyncExcludedFieldIdsMeta = "sync-excluded-field-ids";
 }
