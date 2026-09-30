@@ -49,6 +49,10 @@ public static class SourceEntrySync
                 case "group" or "global_field":
                     SyncObject(target, source, uid, field["schema"] as JArray, excludedFieldIds);
                     break;
+
+                default:
+                    FillMissing(target, source, uid);
+                    break;
             }
         }
     }
@@ -59,6 +63,14 @@ public static class SourceEntrySync
             target[uid] = value.DeepClone();
         else
             target.Remove(uid);
+    }
+
+    private static void FillMissing(JObject target, JObject source, string uid)
+    {
+        if (target[uid] is { Type: not JTokenType.Null } || !source.TryGetValue(uid, out var value))
+            return;
+
+        target[uid] = value.DeepClone();
     }
 
     private static void SyncObject(JObject target, JObject source, string uid, JArray? schema,
