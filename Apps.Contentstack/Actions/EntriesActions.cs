@@ -495,7 +495,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             Creds.Get(CredsNames.StackApiKey).Value,
             updatedByUser,
             input.ExcludeFieldIds,
-            referencedData
+            referencedData,
+            input.SyncExcludedFieldIds
         );
 
         var entryTitle = FileNameHelper.SanitizeBaseName(entry["title"]?.ToString(), input.ContentId);
@@ -563,8 +564,10 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var entryId = input.ContentId ?? extractedEntryId ??
             throw new PluginMisconfigurationException("Entry ID is missing. Please provide it as an input or in the HTML file meta tag");
 
+        var syncExcludedFieldIds = HtmlToJsonConverter.ExtractSyncExcludedFieldIds(memoryStream);
+
         var entry = await GetEntryJObject(contentTypeId, entryId, input.Locale);
-        await SyncFromSourceEntry(contentTypeId, entryId, entry, input.SourceLocale);
+        await SyncFromSourceEntry(contentTypeId, entryId, entry, input.SourceLocale, syncExcludedFieldIds);
 
         var entryBeforeImport = (JObject)entry.DeepClone();
 
@@ -586,7 +589,8 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                 try
                 {
                     var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
-                    await SyncFromSourceEntry(refContentTypeId, refEntryId, refEntry, input.SourceLocale);
+                    await SyncFromSourceEntry(refContentTypeId, refEntryId, refEntry, input.SourceLocale,
+                        syncExcludedFieldIds);
 
                     var refEntryBeforeImport = (JObject)refEntry.DeepClone();
                     memoryStream.Position = 0;
@@ -816,12 +820,13 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     }
 
     // Without a locale the API returns the entry in the master locale.
-    private async Task SyncFromSourceEntry(string contentTypeId, string entryId, JObject entry, string? sourceLocale)
+    private async Task SyncFromSourceEntry(string contentTypeId, string entryId, JObject entry, string? sourceLocale,
+        ISet<string> excludedFieldIds)
     {
         var contentType = await GetContentType(contentTypeId);
         var source = await GetEntryJObject(contentTypeId, entryId, sourceLocale);
 
-        SourceEntrySync.Apply(entry, source, contentType.Schema);
+        SourceEntrySync.Apply(entry, source, contentType.Schema, excludedFieldIds);
     }
 
     private async Task<JObject> GetEntryJObject(string contentTypeId, string entryId, string? locale = default)

@@ -13,6 +13,7 @@ public static class HtmlToJsonConverter
 {
     private const string ContentTypeMetaTag = "blackbird-content-type-id";
     private const string EntryMetaTag = "blackbird-entry-id";
+    private const string SyncExcludedFieldIdsMetaTag = $"blackbird-{ConversionConstants.SyncExcludedFieldIdsMeta}";
 
     private const string OutdatedFileHint =
         "The file looks like it was produced by an outdated version of this app; update the app and run "
@@ -592,5 +593,18 @@ public static class HtmlToJsonConverter
         
         file.Position = 0;
         return (contentTypeId, entryId);
+    }
+
+    public static ISet<string> ExtractSyncExcludedFieldIds(Stream file)
+    {
+        var doc = new HtmlDocument();
+        doc.Load(file);
+
+        var fieldIds = doc.DocumentNode.SelectSingleNode($"//meta[@name='{SyncExcludedFieldIdsMetaTag}']")
+            ?.GetAttributeValue("content", string.Empty) ?? string.Empty;
+
+        file.Position = 0;
+        return fieldIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

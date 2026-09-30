@@ -20,6 +20,9 @@ public class DownloadEntryRequest : IDownloadContentInput
     [Display("Exclude field IDs", Description = "Optional list of field IDs to exclude from the generated HTML file")]
     public IEnumerable<string>? ExcludeFieldIds { get; set; }
 
+    [Display("Exclude field IDs from sync", Description = "Optional list of field IDs whose values 'Upload entry content' does not copy from the source locale, so the target locale keeps its own values for these fields")]
+    public IEnumerable<string>? SyncExcludedFieldIds { get; set; }
+
     [Display("Exclude content type IDs", Description = "Optional list of content type IDs whose referenced entries are skipped. Referenced entries of these content types are not included in the generated HTML file and are not returned in the action output.")]
     [DataSource(typeof(ContentTypeDataHandler))]
     public IEnumerable<string>? ExcludeContentTypeIds { get; set; }

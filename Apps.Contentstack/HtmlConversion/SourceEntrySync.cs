@@ -15,13 +15,15 @@ public static class SourceEntrySync
         "reference", "file", "number", "boolean", "isodate", "taxonomy"
     };
 
-    public static void Apply(JObject target, JObject source, JArray schema)
+    public static void Apply(JObject target, JObject source, JArray schema, ISet<string>? excludedFieldIds = null)
     {
+        excludedFieldIds ??= new HashSet<string>();
+
         foreach (var field in schema.OfType<JObject>())
         {
             var uid = field["uid"]?.ToString();
 
-            if (string.IsNullOrEmpty(uid))
+            if (string.IsNullOrEmpty(uid) || excludedFieldIds.Contains(uid))
                 continue;
 
             if (Flag(field, "non_localizable"))
@@ -37,15 +39,19 @@ public static class SourceEntrySync
                     break;
 
                 case "blocks":
-                    SyncList(target, source, uid, item => BlockSchema(field, item), unwrap: true);
+                    SyncList(target, source, uid, item => BlockSchema(field, item), unwrap: true, excludedFieldIds);
                     break;
 
                 case "group" or "global_field" when Flag(field, "multiple"):
-                    SyncList(target, source, uid, _ => field["schema"] as JArray, unwrap: false);
+                    SyncList(target, source, uid, _ => field["schema"] as JArray, unwrap: false, excludedFieldIds);
                     break;
 
                 case "group" or "global_field":
-                    SyncObject(target, source, uid, field["schema"] as JArray);
+                    SyncObject(target, source, uid, field["schema"] as JArray, excludedFieldIds);
+                    break;
+
+                default:
+                    FillMissing(target, source, uid);
                     break;
             }
         }
@@ -59,11 +65,20 @@ public static class SourceEntrySync
             target.Remove(uid);
     }
 
-    private static void SyncObject(JObject target, JObject source, string uid, JArray? schema)
+    private static void FillMissing(JObject target, JObject source, string uid)
+    {
+        if (target[uid] is { Type: not JTokenType.Null } || !source.TryGetValue(uid, out var value))
+            return;
+
+        target[uid] = value.DeepClone();
+    }
+
+    private static void SyncObject(JObject target, JObject source, string uid, JArray? schema,
+        ISet<string> excludedFieldIds)
     {
         if (schema is not null && source[uid] is JObject from && target[uid] is JObject into)
         {
-            Apply(into, from, schema);
+            Apply(into, from, schema, excludedFieldIds);
             return;
         }
 
@@ -71,7 +86,7 @@ public static class SourceEntrySync
     }
 
     private static void SyncList(JObject target, JObject source, string uid, Func<JObject, JArray?> itemSchema,
-        bool unwrap)
+        bool unwrap, ISet<string> excludedFieldIds)
     {
         if (source[uid] is not JArray from || target[uid] is not JArray into)
         {
@@ -102,9 +117,9 @@ public static class SourceEntrySync
             if (schema is not null)
             {
                 if (unwrap)
-                    Apply((JObject)Inner(item)!, (JObject)Inner((JObject)sourceItem)!, schema);
+                    Apply((JObject)Inner(item)!, (JObject)Inner((JObject)sourceItem)!, schema, excludedFieldIds);
                 else
-                    Apply(item, (JObject)sourceItem, schema);
+                    Apply(item, (JObject)sourceItem, schema, excludedFieldIds);
             }
 
             synced.Add(item);
