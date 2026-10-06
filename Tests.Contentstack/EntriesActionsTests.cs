@@ -18,17 +18,18 @@ public class EntriesActionsTests : TestBaseMultipleConnections
         var actions = new EntriesActions(invocationContext, FileManager);
         var entryInput = new EntryRequest
         {
-            ContentTypeId = "test",
-            ContentId = "blt13a2690c316a972c"
+            ContentTypeId = "repro_replace_assets",
+            ContentId = "blt07dab3a7ceb2909e"
         };
         var replaceInput = new ReplaceEntryAssetsRequest
         {
-            ReplaceAssetsContaining = "ukrainian",
-            WithAssetsContaining = "english"
+            ReplaceAssetsContaining = "english",
+            WithAssetsContaining = "japanese"
         };
+        var locale = new LocaleRequest { Locale = "en-us" };
 
         // Act
-        await actions.ReplaceEntryAssets(entryInput, replaceInput, null);
+        await actions.ReplaceEntryAssets(entryInput, replaceInput, locale);
     }
 
     [TestMethod, TargetConnections]
