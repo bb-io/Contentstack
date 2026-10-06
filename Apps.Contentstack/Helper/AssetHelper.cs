@@ -11,12 +11,12 @@ namespace Apps.Contentstack.Helper;
 
 public class AssetHelper(InvocationContext context) : AppInvocable(context)
 {
-    public async Task UpdateEntryWithAssets(string contentTypeId, string entryId, JObject entryObject, string? locale)
+    public Task UpdateEntryWithAssets(string contentTypeId, string entryId, JObject entryObject, string? locale)
     {
         var endpoint = $"v3/content_types/{contentTypeId}/entries/{entryId}?locale={locale}";
         var request = new ContentstackRequest(endpoint, Method.Put, Creds).WithJsonBody(new { entry = entryObject });
 
-        await Client.ExecuteWithErrorHandling(request);
+        return Client.ExecuteWithErrorHandling(request);
     }
     
     public async Task<Dictionary<string, AssetEntity>> FindAssetsByNames(ISet<string> names)
@@ -30,12 +30,12 @@ public class AssetHelper(InvocationContext context) : AppInvocable(context)
         var assets = await Client.Paginate<ListAssetsResponse, AssetEntity>(
             request, 
             r => r.Assets,
-            collected => names.All(n => collected.Any(a => string.Equals(a.Filename, n, StringComparison.OrdinalIgnoreCase))));
+            collected => names.All(n => collected.Any(a => a.GetNames().Contains(n, StringComparer.OrdinalIgnoreCase))));
 
         foreach (var asset in assets)
         {
-            if (!string.IsNullOrEmpty(asset.Filename) && names.Contains(asset.Filename))
-                result.TryAdd(asset.Filename, asset);
+            foreach (var name in asset.GetNames().Where(names.Contains))
+                result.TryAdd(name, asset);
         }
 
         return result;

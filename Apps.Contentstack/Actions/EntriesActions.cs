@@ -3,7 +3,6 @@ using Apps.Contentstack.Constants;
 using Apps.Contentstack.DataSourceHandlers;
 using Apps.Contentstack.HtmlConversion;
 using Apps.Contentstack.Invocables;
-using Apps.Contentstack.Models;
 using Apps.Contentstack.Models.Entities;
 using Apps.Contentstack.Models.Request;
 using Apps.Contentstack.Models.Request.Entry;
@@ -671,59 +670,45 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
     [Action("Replace entry assets", Description = "Replace referenced entry assets by matching filename substrings")]
     public async Task ReplaceEntryAssets(
         [ActionParameter] EntryRequest entryInput, 
-        [ActionParameter] ReplaceEntryAssetsRequest replaceInput, [ActionParameter] LocaleRequest locale)
+        [ActionParameter] ReplaceEntryAssetsRequest replaceInput, 
+        [ActionParameter] LocaleRequest locale)
     {
         var entry = await GetEntryJObject(entryInput.ContentTypeId, entryInput.ContentId, locale.Locale);
-        var assetObjects = entry.Descendants()
-            .OfType<JObject>()
-            .Where(x => x.IsAssetObject())
-            .Select(node => (Node: node, Asset: node.ToObject<AssetEntity>()!))
-            .ToList();
-        
-        var targetNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var toReplace = new List<(JObject AssetObject, string TargetName)>();
-
         string search = replaceInput.ReplaceAssetsContaining;
         string replacement = replaceInput.WithAssetsContaining;
         
-        foreach (var (node, asset) in assetObjects)
-        {
-            string? sourceName = asset.Filename;
-            if (string.IsNullOrEmpty(sourceName) || !sourceName.Contains(search, StringComparison.OrdinalIgnoreCase))
-                continue;
+        var assetNodes = entry.Descendants()
+            .OfType<JObject>()
+            .Where(x => x.IsAssetObject())
+            .Select(node =>
+            {
+                var asset = node.ToObject<AssetEntity>() ?? 
+                            throw new PluginApplicationException("Couldn't build asset from node");
+                return (Node: node, asset.Uid, TargetName: asset.BuildTargetName(search, replacement));
+            })
+            .ToList();
 
-            string targetName = sourceName.Replace(search, replacement, StringComparison.OrdinalIgnoreCase);
-            toReplace.Add((node, targetName));
-            targetNames.Add(targetName);
-        }
-
-        if (toReplace.Count == 0)
+        var targetNames = assetNodes
+            .Select(x => x.TargetName)
+            .OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        
+        if (targetNames.Count == 0)
             return;
-
+        
         var assetHelper = new AssetHelper(InvocationContext);
         var foundAssets = await assetHelper.FindAssetsByNames(targetNames);
         
-        if (foundAssets.Count == 0)
+        var missing = targetNames.Where(n => !foundAssets.ContainsKey(n)).ToList();
+        if (missing.Count > 0)
         {
             throw new PluginMisconfigurationException(
-                $"No replacement assets found. Looked for: {string.Join(", ", targetNames)}. " + 
-                "Make sure assets with these names exist or check your 'replace'/'with' inputs.");
+                $"Replacement assets not found: {string.Join(", ", missing)}. " +
+                "Check the asset filenames/titles or your 'replace'/'with' inputs.");
         }
 
-        foreach (var (node, asset) in assetObjects)
-        {
-            string sourceName = asset.Filename;
-            string newUid = asset.Uid;
-
-            if (!string.IsNullOrEmpty(sourceName) && sourceName.Contains(search, StringComparison.OrdinalIgnoreCase))
-            {
-                var targetName = sourceName.Replace(search, replacement, StringComparison.OrdinalIgnoreCase);
-                if (foundAssets.TryGetValue(targetName, out var newAsset))
-                    newUid = newAsset.Uid;
-            }
-
-            node.Replace(new JValue(newUid));
-        }
+        foreach (var (node, uid, targetName) in assetNodes)
+            node.Replace(new JValue(targetName is null ? uid : foundAssets[targetName].Uid));
 
         await assetHelper.UpdateEntryWithAssets(entryInput.ContentTypeId, entryInput.ContentId, entry, locale.Locale);
     }
