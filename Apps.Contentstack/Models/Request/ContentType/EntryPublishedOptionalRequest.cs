@@ -9,4 +9,7 @@ public class EntryPublishedOptionalRequest : ContentTypeOptionalRequest
     [Display("Environment", Description = "Only fire this event if the entry was published to this environment")]
     [DataSource(typeof(EnvironmentDataHandler))]
     public string? Environment { get; set; }
+
+    [Display("Branch ID", Description = "Only fire this event if the entry was published from this branch")]
+    public string? Branch { get; set; }
 }

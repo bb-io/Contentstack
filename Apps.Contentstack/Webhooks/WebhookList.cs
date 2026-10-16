@@ -26,7 +26,7 @@ public class WebhookList
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On any entry published")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryPublished(WebhookRequest webhookRequest,
         [WebhookParameter] EntryPublishedOptionalRequest filterRequest)
-        => HandleEntryWebhook(webhookRequest, filterRequest, filterRequest.Environment);
+        => HandleEntryWebhook(webhookRequest, filterRequest, filterRequest.Environment, filterRequest.Branch);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On any entry unpublished")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryUnpublished(WebhookRequest webhookRequest,
@@ -39,7 +39,7 @@ public class WebhookList
         => HandleEntryWebhook(webhookRequest, contentTypeRequest);
 
     private Task<WebhookResponse<EntryWebhookResponse>> HandleEntryWebhook(WebhookRequest webhookRequest,
-        ContentTypeOptionalRequest contentTypeRequest, string? environment = null)
+        ContentTypeOptionalRequest contentTypeRequest, string? environment = null, string? branch = null)
     {
         var payload = webhookRequest.Body.ToString();
         ArgumentException.ThrowIfNullOrEmpty(payload, nameof(webhookRequest.Body));
@@ -48,6 +48,16 @@ public class WebhookList
 
         if (!string.IsNullOrEmpty(environment) &&
             !string.Equals(environment, result.Data.Environment?.Uid, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
+            {
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(branch) &&
+            !string.Equals(branch, result.Data.Branch?.Uid, StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult(new WebhookResponse<EntryWebhookResponse>
             {

@@ -8,7 +8,8 @@ namespace Tests.Contentstack;
 [TestClass]
 public class WebhookFiltersTests
 {
-    private static WebhookRequest BuildRequest(string locale, string? updatedBy = null, string contentTypeUid = "page")
+    private static WebhookRequest BuildRequest(string locale, string? updatedBy = null, string contentTypeUid = "page",
+        string? environmentUid = null, string? branchUid = null)
     {
         var body = JsonConvert.SerializeObject(new
         {
@@ -29,11 +30,104 @@ public class WebhookFiltersTests
                     title = "Page",
                     description = "",
                     created_at = "2024-01-01T00:00:00.000Z"
+                },
+                environment = environmentUid is null ? null : new
+                {
+                    uid = environmentUid,
+                    name = "Test environment"
+                },
+                branch = branchUid is null ? null : new
+                {
+                    uid = branchUid
                 }
             }
         });
 
         return new WebhookRequest { Body = body };
+    }
+
+    // --- Branch ---
+
+    [TestMethod]
+    public async Task OnEntryPublished_BranchMatches_ReturnsResult()
+    {
+        var webhookList = new WebhookList();
+        var filter = new EntryPublishedOptionalRequest { Branch = "main" };
+
+        var result = await webhookList.OnEntryPublished(BuildRequest("en-us", branchUid: "MAIN"), filter);
+
+        Assert.AreNotEqual(WebhookRequestType.Preflight, result.ReceivedWebhookRequestType);
+        Assert.IsNotNull(result.Result);
+    }
+
+    [TestMethod]
+    public async Task OnEntryPublished_BranchDoesNotMatch_ReturnsPreflight()
+    {
+        var webhookList = new WebhookList();
+        var filter = new EntryPublishedOptionalRequest { Branch = "main" };
+
+        var result = await webhookList.OnEntryPublished(BuildRequest("en-us", branchUid: "development"), filter);
+
+        Assert.AreEqual(WebhookRequestType.Preflight, result.ReceivedWebhookRequestType);
+        Assert.IsNull(result.Result);
+    }
+
+    [TestMethod]
+    public async Task OnEntryPublished_BranchMissingFromPayload_ReturnsPreflight()
+    {
+        var webhookList = new WebhookList();
+        var filter = new EntryPublishedOptionalRequest { Branch = "main" };
+
+        var result = await webhookList.OnEntryPublished(BuildRequest("en-us"), filter);
+
+        Assert.AreEqual(WebhookRequestType.Preflight, result.ReceivedWebhookRequestType);
+        Assert.IsNull(result.Result);
+    }
+
+    [TestMethod]
+    public async Task OnEntryPublished_BranchNotSet_ReturnsResult()
+    {
+        var webhookList = new WebhookList();
+        var filter = new EntryPublishedOptionalRequest();
+
+        var result = await webhookList.OnEntryPublished(BuildRequest("en-us", branchUid: "development"), filter);
+
+        Assert.AreNotEqual(WebhookRequestType.Preflight, result.ReceivedWebhookRequestType);
+        Assert.IsNotNull(result.Result);
+    }
+
+    [TestMethod]
+    public async Task OnEntryPublished_EnvironmentMatchesButBranchDoesNotMatch_ReturnsPreflight()
+    {
+        var webhookList = new WebhookList();
+        var filter = new EntryPublishedOptionalRequest
+        {
+            Environment = "blt_environment",
+            Branch = "main"
+        };
+
+        var result = await webhookList.OnEntryPublished(BuildRequest("en-us",
+            environmentUid: "blt_environment", branchUid: "development"), filter);
+
+        Assert.AreEqual(WebhookRequestType.Preflight, result.ReceivedWebhookRequestType);
+        Assert.IsNull(result.Result);
+    }
+
+    [TestMethod]
+    public async Task OnEntryPublished_BranchMatchesButEnvironmentDoesNotMatch_ReturnsPreflight()
+    {
+        var webhookList = new WebhookList();
+        var filter = new EntryPublishedOptionalRequest
+        {
+            Environment = "blt_production",
+            Branch = "main"
+        };
+
+        var result = await webhookList.OnEntryPublished(BuildRequest("en-us",
+            environmentUid: "blt_staging", branchUid: "main"), filter);
+
+        Assert.AreEqual(WebhookRequestType.Preflight, result.ReceivedWebhookRequestType);
+        Assert.IsNull(result.Result);
     }
 
     // --- ExcludeLocale ---
