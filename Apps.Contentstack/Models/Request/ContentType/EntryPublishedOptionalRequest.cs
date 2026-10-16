@@ -11,5 +11,6 @@ public class EntryPublishedOptionalRequest : ContentTypeOptionalRequest
     public string? Environment { get; set; }
 
     [Display("Branch ID", Description = "Only fire this event if the entry was published from this branch")]
+    [DataSource(typeof(BranchDataHandler))]
     public string? Branch { get; set; }
 }
