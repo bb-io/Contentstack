@@ -83,7 +83,7 @@ name your connection for future reference e.g. 'My Contentstack connection'.
 
 - **On entry created**
 - **On entry deleted**
-- **On entry published** supports optional filters for content type, tag, locale, and environment and outputs the locale of the published entry.
+- **On entry published** supports optional filters for content type, tag, locale, environment, and branch and outputs the locale of the published entry.
 - **On entry unpublished**
 - **On entry updated**
 
