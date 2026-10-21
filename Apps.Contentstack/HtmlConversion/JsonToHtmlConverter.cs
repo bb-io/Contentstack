@@ -119,8 +119,10 @@ public static class JsonToHtmlConverter
 
         switch (entryProperty.DataType)
         {
+            case "json" when IsJsonRichText(entryProperty, property):
+                JsonRichTextToHtml(entryId, doc, parentNode, (JObject)property, max);
+                break;
             case "json":
-                JsonRichTextToHtml(entryId, doc, parentNode, property as JObject, max);
                 break;
             case "blocks":
                 if (property is JArray jArray)
@@ -191,6 +193,16 @@ public static class JsonToHtmlConverter
     // The shape check stays as a fallback for schemas that carry no field metadata.
     private static bool IsHtmlValue(EntryProperty entryProperty, string value)
         => entryProperty.IsHtmlRichText || (value.StartsWith('<') && value.EndsWith('>'));
+
+    /// <summary>
+    /// JSON fields also back custom field extensions, such as an icon picker storing {"text":"arrow-right"}. Their
+    /// value is data, not text to translate; only a JSON RTE document is exported.
+    /// </summary>
+    internal static bool IsJsonRichText(EntryProperty entryProperty, JToken value)
+        => !entryProperty.IsExtension && IsJsonRichTextDocument(value);
+
+    internal static bool IsJsonRichTextDocument(JToken value)
+        => value is JObject document && document["children"] is JArray;
 
     private static void SetPathAndKey(HtmlNode node, string entryId, string path)
     {
