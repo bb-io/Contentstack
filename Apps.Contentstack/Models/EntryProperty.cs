@@ -32,4 +32,8 @@ public class EntryProperty
     [JsonIgnore]
     public bool IsHtmlRichText => FieldMetadata?["allow_rich_text"]?.Type == JTokenType.Boolean
                                   && FieldMetadata["allow_rich_text"]!.Value<bool>();
+
+    [JsonIgnore]
+    public bool IsExtension => FieldMetadata?["extension"]?.Type == JTokenType.Boolean
+                               && FieldMetadata["extension"]!.Value<bool>();
 }

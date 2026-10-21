@@ -317,11 +317,16 @@ public static class HtmlToJsonConverter
             return;
         }
 
+        // Files exported before JSON custom fields were left out still carry them; they hold no text to import.
+        if (!JsonToHtmlConverter.IsJsonRichTextDocument(source))
+            return;
+
         var leaves = container.Descendants()
             .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
             .ToList();
-        
-        if (leaves.Count == 0)
+        var markerlessBlocks = MarkerlessBlocks(container);
+
+        if (leaves.Count == 0 && markerlessBlocks.Count == 0)
         {
             if (HasTranslatableText(source))
                 Report(errors, logger,
@@ -330,6 +335,14 @@ public static class HtmlToJsonConverter
 
             return;
         }
+
+        var allPlaced = true;
+        foreach (var block in markerlessBlocks)
+            allPlaced &= TryPlaceMarkerlessBlock(block, fieldPath, source, logger, errors);
+
+        // Writing the field now would put source-language text in the blocks that could not be placed.
+        if (!allPlaced)
+            return;
 
         foreach (var node in leaves)
         {
@@ -365,6 +378,54 @@ public static class HtmlToJsonConverter
         }
 
         SetTokenAtPath(entry, fieldPath, source);
+    }
+
+    /// <summary>
+    /// Blocks whose translated text came back without the span that marks the text run it belongs to: translation
+    /// tools may drop an inline tag that wraps a whole segment.
+    /// </summary>
+    private static List<HtmlNode> MarkerlessBlocks(HtmlNode container)
+        => container.Descendants()
+            .Where(x => x.Attributes[ConversionConstants.BlackbirdKey] is not null
+                        && !x.Descendants().Any(d => d.Attributes[ConversionConstants.PathAttr] is not null)
+                        && !string.IsNullOrWhiteSpace(HttpUtility.HtmlDecode(x.InnerText)))
+            .ToList();
+
+    // A block with a single text run can only mean that run; with several, the text cannot be split safely.
+    private static bool TryPlaceMarkerlessBlock(HtmlNode block, string fieldPath, JToken source, Logger? logger,
+        ICollection<string> errors)
+    {
+        var key = block.Attributes[ConversionConstants.BlackbirdKey].Value;
+        var at = key.IndexOf($"-{fieldPath}.", StringComparison.Ordinal);
+        var path = at < 0 ? key : key[(at + 1)..];
+        var relativePath = at < 0 ? null : ToRelativePath(fieldPath, path);
+
+        var runs = relativePath is null
+            ? []
+            : Resolve(source, relativePath)?.SelectTokens("$..text").OfType<JValue>().ToList() ?? [];
+
+        if (runs.Count != 1 || runs[0].Type != JTokenType.String)
+        {
+            Report(errors, logger,
+                $"Rich text field '{fieldPath}' was left unchanged: the translation of '{path}' is missing the "
+                + "markers that say which text belongs to which part of the field (the translation tool removed "
+                + "them), and that part has several pieces of text to choose from. Keep the tags in the translation "
+                + "tool and upload the file again.");
+            return false;
+        }
+
+        var value = HttpUtility.HtmlDecode(block.InnerText);
+
+        if (TransportMarker.IsPresentIn(value))
+        {
+            Report(errors, logger,
+                $"Rich text field '{fieldPath}' was left unchanged: the file carries this app's field markers as "
+                + $"text for '{path}'. {OutdatedFileHint} ({TransportMarker.Describe(value)})");
+            return false;
+        }
+
+        runs[0].Value = value;
+        return true;
     }
 
     private static bool HasTranslatableText(JToken source)

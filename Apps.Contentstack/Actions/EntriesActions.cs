@@ -578,30 +578,26 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
         await UpdateEntry(contentTypeId, entryId, entry, input.Locale);
 
-        if (!isXliff)
+        memoryStream.Position = 0;
+        var referencedEntryIds = HtmlToJsonConverter.ExtractReferencedEntryIds(memoryStream);
+        foreach (var (refContentTypeId, refEntryId) in referencedEntryIds)
         {
-            memoryStream.Position = 0;
-            var referencedEntryIds = HtmlToJsonConverter.ExtractReferencedEntryIds(memoryStream);
-
-            foreach (var (refContentTypeId, refEntryId) in referencedEntryIds)
+            try
             {
-                try
-                {
-                    var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
-                    await SyncFromSourceEntry(refContentTypeId, refEntryId, refEntry, input.SourceLocale,
-                        syncExcludedFieldIds);
+                var refEntry = await GetEntryJObject(refContentTypeId, refEntryId, input.Locale);
+                await SyncFromSourceEntry(refContentTypeId, refEntryId, refEntry, input.SourceLocale,
+                    syncExcludedFieldIds);
 
-                    var refEntryBeforeImport = (JObject)refEntry.DeepClone();
-                    memoryStream.Position = 0;
-                    report.Add(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId,
-                        refEntryId, refEntry, InvocationContext.Logger, structureFromSource: true));
-                    GuardEntryPayload(refEntryId, refEntryBeforeImport, refEntry, report.Errors);
-                    await UpdateEntry(refContentTypeId, refEntryId, refEntry, input.Locale);
-                }
-                catch (Exception ex)
-                {
-                    errors.Add($"Entry {refEntryId} (content type: {refContentTypeId}) could not be updated — {ex.Message}");
-                }
+                var refEntryBeforeImport = (JObject)refEntry.DeepClone();
+                memoryStream.Position = 0;
+                report.Add(HtmlToJsonConverter.UpdateReferencedEntryFromHtml(memoryStream, refContentTypeId,
+                    refEntryId, refEntry, InvocationContext.Logger, structureFromSource: true));
+                GuardEntryPayload(refEntryId, refEntryBeforeImport, refEntry, report.Errors);
+                await UpdateEntry(refContentTypeId, refEntryId, refEntry, input.Locale);
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"Entry {refEntryId} (content type: {refContentTypeId}) could not be updated — {ex.Message}");
             }
         }
 
