@@ -14,6 +14,8 @@ public abstract class ContentstackWebhookHandler : IWebhookEventHandler
 {
     protected abstract string Event { get; }
 
+    protected virtual string? Branch => null;
+
     public Task SubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
         Dictionary<string, string> values)
     {
@@ -31,6 +33,7 @@ public abstract class ContentstackWebhookHandler : IWebhookEventHandler
                     [
                         new WebhookDestinationEntity() { TargetUrl = values[CredsNames.WebhookUrl] }
                     ],
+                    Branches = string.IsNullOrWhiteSpace(Branch) ? null : [Branch],
                     RetryPolicy = "manual"
                 }
             }, JsonConfig.Settings);
