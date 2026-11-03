@@ -48,6 +48,12 @@ public class DataSourceHandlersTests : TestBaseMultipleConnections
     }
 
     [TestMethod, TargetConnections]
+    public async Task GetDataAsync_UserHandler_ReturnsNonEmptyCollection(InvocationContext invocationContext)
+    {
+        await AssertHandlerReturnsData(new UserDataHandler(invocationContext));
+    }
+
+    [TestMethod, TargetConnections]
     public async Task GetDataAsync_EntryTags_ReturnsNonEmptyCollection(InvocationContext invocationContext)
     {
         var handler = new EntryTagDataSourceHandler(invocationContext, new Apps.Contentstack.Models.Request.Entry.EntryRequest { ContentId= "bltb0b17fd01c287e55", ContentTypeId= "missions" },
