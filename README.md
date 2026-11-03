@@ -62,7 +62,7 @@ name your connection for future reference e.g. 'My Contentstack connection'.
 - **Get entry references** returns entry IDs and content type IDs where the specific entry is referenced. Optionally exclude references of specific content types.
 - **Get entry string/number/date/boolean property** gets data of the specified entry's property.
 - **Set entry string/number/date/boolean property** sets data to the specified entry's property.
-- **Search entries** returns a list of entries based on provided filter criteria, including environment, locale, tag, workflow stage, and updated before/after.
+- **Search entries** returns a list of entries based on provided filter criteria, including environment, locale, tag, workflow stage, updated before/after, not updated by users, and not published by a user (checked against publish details of the selected environment and locale).
 - **Download entry content** downloads entry content converted to an HTML file, can exclude specified field IDs, can skip referenced entries of specified content types, and can optionally return referenced entry UIDs plus referenced entry/content type pairs from the root entry.
 - **Upload entry content** updates entry content from a file.
 - **Get entry file metadata** extracts content type and entry IDs from a file.

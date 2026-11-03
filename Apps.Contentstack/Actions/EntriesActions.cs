@@ -60,7 +60,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             var result = await SearchEntries(new()
             {
                 ContentTypeIds = new[] { contentType.Uid }
-            }, new(), new(), new(), new(), new());
+            }, new(), new(), new(), new(), new(), new());
 
             bool isWorkflowStageFilterProvided = request.WorkflowStages != null && request.WorkflowStages.Any();
             if (isWorkflowStageFilterProvided)
@@ -89,8 +89,10 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] LocaleRequest locale,
         [ActionParameter] TagFilterRequest tagFilter,
         [ActionParameter] UpdatedAtFilterRequest updatedAtFilter,
-        [ActionParameter] UpdatedByFilterRequest updatedByFilter)
+        [ActionParameter] UpdatedByFilterRequest updatedByFilter,
+        [ActionParameter] PublishedByFilterRequest publishedByFilter)
     {
+        var excludedPublisherUserId = publishedByFilter?.ExcludedPublisherUserId;
         var contentTypeIds = searchRequest.ContentTypeIds?.ToArray();
         if (contentTypeIds == null || contentTypeIds.Length == 0)
         {
@@ -113,9 +115,9 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
                     var queryJson = JsonConvert.SerializeObject(new
                     {
                         updated_by = new Dictionary<string, object>
-                {
-                    { "$nin", excludedArray }
-                }
+                        {
+                            { "$nin", excludedArray }
+                        }
                     });
 
                     endpoint = endpoint.SetQueryParameter("query", queryJson);
@@ -127,6 +129,9 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
 
             if (!string.IsNullOrWhiteSpace(searchRequest.Environment))
                 endpoint = endpoint.SetQueryParameter("environment", searchRequest.Environment);
+
+            if (!string.IsNullOrWhiteSpace(excludedPublisherUserId))
+                endpoint = endpoint.SetQueryParameter("include_publish_details", "true");
 
             var request = new ContentstackRequest(endpoint, Method.Get, Creds);
             var result = await Client.ExecuteWithErrorHandling<ListEntriesResponse>(request);
@@ -158,6 +163,13 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         if (updatedAtFilter.UpdatedBefore.HasValue)
         {
             entries = entries.Where(x => x.UpdatedAt <= updatedAtFilter.UpdatedBefore.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(excludedPublisherUserId))
+        {
+            var environmentUid = await GetEnvironmentUidByName(searchRequest.Environment);
+            entries = entries.Where(x =>
+                !PublishDetailsFilter.IsPublishedBy(x, excludedPublisherUserId, environmentUid, locale.Locale));
         }
 
         var filteredEntries = entries.ToArray();
@@ -831,6 +843,20 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         var response = await Client.ExecuteWithErrorHandling<ContentTypeResponse>(request);
 
         return response.ContentType;
+    }
+
+    private async Task<string?> GetEnvironmentUidByName(string? environmentName)
+    {
+        if (string.IsNullOrWhiteSpace(environmentName))
+            return null;
+
+        var request = new ContentstackRequest("v3/environments", Method.Get, Creds);
+        var response = await Client.ExecuteWithErrorHandling<ListEnvironmentsResponse>(request);
+
+        return response.Environments
+                   .FirstOrDefault(x => x.Name.Equals(environmentName, StringComparison.OrdinalIgnoreCase))?.Uid
+               ?? throw new PluginMisconfigurationException(
+                   $"Environment '{environmentName}' was not found. Please select an existing environment");
     }
 
     internal static void DowngradeFilePropertyByName(JToken token, string propertyName)

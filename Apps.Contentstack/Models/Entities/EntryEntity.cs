@@ -1,3 +1,4 @@
+using Apps.Contentstack.Models.Converters;
 using Newtonsoft.Json;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
@@ -47,4 +48,8 @@ public class EntryEntity : IDownloadContentInput
     
     [JsonProperty("_workflow")]
     public WorkflowStageEntity? Workflow { get; set; }
+
+    [DefinitionIgnore, JsonProperty("publish_details")]
+    [JsonConverter(typeof(SingleOrArrayConverter<PublishDetailEntity>))]
+    public List<PublishDetailEntity> PublishDetails { get; set; } = new();
 }
