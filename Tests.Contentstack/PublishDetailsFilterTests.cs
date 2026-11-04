@@ -78,64 +78,80 @@ public class PublishDetailsFilterTests
     }
 
     [TestMethod]
-    public void IsPublishedBy_UserPublishedInSelectedEnvironmentAndLocale_ReturnsTrue()
+    public void IsPublishedByAny_UserPublishedInSelectedEnvironmentAndLocale_ReturnsTrue()
     {
         var entry = BuildEntry("en-us", PublishedBy(Publisher, Production, "de-de"));
 
-        Assert.IsTrue(PublishDetailsFilter.IsPublishedBy(entry, Publisher, Production, "de-de"));
+        Assert.IsTrue(PublishDetailsFilter.IsPublishedByAny(entry, [Publisher], Production, "de-de"));
     }
 
     [TestMethod]
-    public void IsPublishedBy_UserPublishedOnlyInAnotherEnvironment_ReturnsFalse()
+    public void IsPublishedByAny_UserPublishedOnlyInAnotherEnvironment_ReturnsFalse()
     {
         var entry = BuildEntry("en-us",
             PublishedBy(Publisher, Staging, "en-us"),
             PublishedBy(OtherUser, Production, "en-us"));
 
-        Assert.IsFalse(PublishDetailsFilter.IsPublishedBy(entry, Publisher, Production, "en-us"));
+        Assert.IsFalse(PublishDetailsFilter.IsPublishedByAny(entry, [Publisher], Production, "en-us"));
     }
 
     [TestMethod]
-    public void IsPublishedBy_UserPublishedOnlyInAnotherLocale_ReturnsFalse()
+    public void IsPublishedByAny_UserPublishedOnlyInAnotherLocale_ReturnsFalse()
     {
         var entry = BuildEntry("en-us",
             PublishedBy(Publisher, Production, "fr-fr"),
             PublishedBy(OtherUser, Production, "de-de"));
 
-        Assert.IsFalse(PublishDetailsFilter.IsPublishedBy(entry, Publisher, Production, "de-de"));
+        Assert.IsFalse(PublishDetailsFilter.IsPublishedByAny(entry, [Publisher], Production, "de-de"));
     }
 
     [TestMethod]
-    public void IsPublishedBy_NoEnvironmentSelected_MatchesAnyEnvironment()
+    public void IsPublishedByAny_NoEnvironmentSelected_MatchesAnyEnvironment()
     {
         var entry = BuildEntry("en-us", PublishedBy(Publisher, Staging, "en-us"));
 
-        Assert.IsTrue(PublishDetailsFilter.IsPublishedBy(entry, Publisher, null, "en-us"));
+        Assert.IsTrue(PublishDetailsFilter.IsPublishedByAny(entry, [Publisher], null, "en-us"));
     }
 
     [TestMethod]
-    public void IsPublishedBy_NoLocaleSelected_MatchesEntryLocale()
+    public void IsPublishedByAny_NoLocaleSelected_MatchesEntryLocale()
     {
         var entry = BuildEntry("en-us",
             PublishedBy(Publisher, Production, "fr-fr"),
             PublishedBy(OtherUser, Production, "en-us"));
 
-        Assert.IsFalse(PublishDetailsFilter.IsPublishedBy(entry, Publisher, Production, null));
-        Assert.IsTrue(PublishDetailsFilter.IsPublishedBy(BuildEntry("fr-fr", PublishedBy(Publisher, Production, "fr-fr")),
-            Publisher, Production, null));
+        Assert.IsFalse(PublishDetailsFilter.IsPublishedByAny(entry, [Publisher], Production, null));
+        Assert.IsTrue(PublishDetailsFilter.IsPublishedByAny(BuildEntry("fr-fr", PublishedBy(Publisher, Production, "fr-fr")),
+            [Publisher], Production, null));
     }
 
     [TestMethod]
-    public void IsPublishedBy_PublishedByAnotherUser_ReturnsFalse()
+    public void IsPublishedByAny_PublishedByAnotherUser_ReturnsFalse()
     {
         var entry = BuildEntry("en-us", PublishedBy(OtherUser, Production, "en-us"));
 
-        Assert.IsFalse(PublishDetailsFilter.IsPublishedBy(entry, Publisher, Production, "en-us"));
+        Assert.IsFalse(PublishDetailsFilter.IsPublishedByAny(entry, [Publisher], Production, "en-us"));
     }
 
     [TestMethod]
-    public void IsPublishedBy_NeverPublished_ReturnsFalse()
+    public void IsPublishedByAny_OneOfSeveralUsersPublished_ReturnsTrue()
     {
-        Assert.IsFalse(PublishDetailsFilter.IsPublishedBy(BuildEntry("en-us"), Publisher, Production, "en-us"));
+        var entry = BuildEntry("en-us", PublishedBy(OtherUser, Production, "en-us"));
+
+        Assert.IsTrue(PublishDetailsFilter.IsPublishedByAny(entry, [Publisher, OtherUser], Production, "en-us"));
+    }
+
+    [TestMethod]
+    public void IsPublishedByAny_NoneOfSeveralUsersPublished_ReturnsFalse()
+    {
+        var entry = BuildEntry("en-us", PublishedBy("user-third", Production, "en-us"));
+
+        Assert.IsFalse(PublishDetailsFilter.IsPublishedByAny(entry, [Publisher, OtherUser], Production, "en-us"));
+    }
+
+    [TestMethod]
+    public void IsPublishedByAny_NeverPublished_ReturnsFalse()
+    {
+        Assert.IsFalse(PublishDetailsFilter.IsPublishedByAny(BuildEntry("en-us"), [Publisher], Production, "en-us"));
     }
 }

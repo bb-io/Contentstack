@@ -92,7 +92,9 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
         [ActionParameter] UpdatedByFilterRequest updatedByFilter,
         [ActionParameter] PublishedByFilterRequest publishedByFilter)
     {
-        var excludedPublisherUserId = publishedByFilter?.ExcludedPublisherUserId;
+        var excludedPublisherUserIds = (publishedByFilter?.ExcludedPublisherUserIds ?? [])
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToArray();
         var contentTypeIds = searchRequest.ContentTypeIds?.ToArray();
         if (contentTypeIds == null || contentTypeIds.Length == 0)
         {
@@ -130,7 +132,7 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             if (!string.IsNullOrWhiteSpace(searchRequest.Environment))
                 endpoint = endpoint.SetQueryParameter("environment", searchRequest.Environment);
 
-            if (!string.IsNullOrWhiteSpace(excludedPublisherUserId))
+            if (excludedPublisherUserIds.Length > 0)
                 endpoint = endpoint.SetQueryParameter("include_publish_details", "true");
 
             var request = new ContentstackRequest(endpoint, Method.Get, Creds);
@@ -165,11 +167,11 @@ public class EntriesActions(InvocationContext invocationContext, IFileManagement
             entries = entries.Where(x => x.UpdatedAt <= updatedAtFilter.UpdatedBefore.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(excludedPublisherUserId))
+        if (excludedPublisherUserIds.Length > 0)
         {
             var environmentUid = await GetEnvironmentUidByName(searchRequest.Environment);
             entries = entries.Where(x =>
-                !PublishDetailsFilter.IsPublishedBy(x, excludedPublisherUserId, environmentUid, locale.Locale));
+                !PublishDetailsFilter.IsPublishedByAny(x, excludedPublisherUserIds, environmentUid, locale.Locale));
         }
 
         var filteredEntries = entries.ToArray();

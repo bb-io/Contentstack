@@ -6,7 +6,7 @@ namespace Apps.Contentstack.Models.Request.Entry;
 
 public class PublishedByFilterRequest
 {
-    [Display("Not published by", Description = "Excludes entries published by this user in the selected environment and locale")]
+    [Display("Not published by", Description = "Excludes entries published by any of these users in the selected environment and locale")]
     [DataSource(typeof(UserDataHandler))]
-    public string? ExcludedPublisherUserId { get; set; }
+    public IEnumerable<string>? ExcludedPublisherUserIds { get; set; }
 }

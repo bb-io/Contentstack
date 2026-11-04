@@ -174,7 +174,7 @@ public class EntriesActionsTests : TestBaseMultipleConnections
                     continue;
 
                 var filtered = await SearchEntries(actions, searchRequest,
-                    new PublishedByFilterRequest { ExcludedPublisherUserId = publisher });
+                    new PublishedByFilterRequest { ExcludedPublisherUserIds = [publisher] });
 
                 TestContext.WriteLine($"Unfiltered: {unfiltered.Count}, filtered: {filtered.Count}");
                 Assert.Contains(publisher, selectableUserIds);
@@ -197,7 +197,7 @@ public class EntriesActionsTests : TestBaseMultipleConnections
         {
             var searchRequest = new SearchEntriesRequest { ContentTypeIds = [contentType] };
             var withPublishDetails = await SearchEntries(actions, searchRequest,
-                new PublishedByFilterRequest { ExcludedPublisherUserId = "user-without-publications" });
+                new PublishedByFilterRequest { ExcludedPublisherUserIds = ["user-without-publications"] });
             var publisher = withPublishDetails.Entries
                 .SelectMany(x => x.PublishDetails.Where(d => d.Locale == x.Locale))
                 .Select(x => x.User)
@@ -206,7 +206,7 @@ public class EntriesActionsTests : TestBaseMultipleConnections
                 continue;
 
             var filtered = await SearchEntries(actions, searchRequest,
-                new PublishedByFilterRequest { ExcludedPublisherUserId = publisher });
+                new PublishedByFilterRequest { ExcludedPublisherUserIds = [publisher] });
 
             TestContext.WriteLine($"Unfiltered: {withPublishDetails.Count}, filtered: {filtered.Count}");
             Assert.IsLessThan(withPublishDetails.Count, filtered.Count);
