@@ -10,7 +10,7 @@ using Blackbird.Applications.Sdk.Common.Webhooks;
 namespace Apps.Contentstack.Webhooks;
 
 [WebhookList("Entries")]
-public class WebhookList
+public class WebhookList : IAsyncWebhookHandler
 {
     [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On any entry created")]
     public Task<WebhookResponse<EntryWebhookResponse>> OnEntryCreated(WebhookRequest webhookRequest,
