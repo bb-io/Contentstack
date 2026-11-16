@@ -7,7 +7,7 @@ using Blackbird.Applications.Sdk.Common.Webhooks;
 namespace Apps.Contentstack.Webhooks;
 
 [WebhookList("Assets")]
-public class AssetsWebhookList
+public class AssetsWebhookList : IAsyncWebhookHandler
 {
     [Webhook("On asset deleted", typeof(AssetDeletedHandler), Description = "On any asset deleted")]
     public Task<WebhookResponse<AssetWebhookResponse>> OnAssetDeleted(WebhookRequest webhookRequest)

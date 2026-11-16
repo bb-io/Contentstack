@@ -16,4 +16,10 @@ public class WebhookEntity
     public IEnumerable<string>? Branches { get; set; }
     
     public string RetryPolicy { get; set; }
+
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Disabled { get; set; }
+
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public WebhookHealthEntity? Unhealthy { get; set; }
 }

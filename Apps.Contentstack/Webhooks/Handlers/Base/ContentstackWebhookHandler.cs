@@ -10,7 +10,7 @@ using RestSharp;
 
 namespace Apps.Contentstack.Webhooks.Handlers.Base;
 
-public abstract class ContentstackWebhookHandler : IWebhookEventHandler
+public abstract class ContentstackWebhookHandler : IWebhookEventHandler, IAsyncValidatableWebhookEventHandler
 {
     protected abstract string Event { get; }
 
@@ -47,10 +47,7 @@ public abstract class ContentstackWebhookHandler : IWebhookEventHandler
         var creds = authenticationCredentialsProvider.ToArray();
         var client = new ContentstackClient(creds);
 
-        var webhooks = await GetAllWebhooks(client, creds);
-        var webhookToDelete =
-            webhooks.Webhooks.FirstOrDefault(x =>
-                x.Destinations.Any(x => x.TargetUrl == values[CredsNames.WebhookUrl]));
+        var webhookToDelete = await FindSubscribedWebhook(client, creds, values);
 
         if (webhookToDelete is null)
             return;
@@ -58,6 +55,57 @@ public abstract class ContentstackWebhookHandler : IWebhookEventHandler
         var request = new ContentstackRequest($"v3/webhooks/{webhookToDelete.Uid}", Method.Delete, creds);
         await client.ExecuteWithErrorHandling(request);
     }
+
+    public async Task<WebhookSubscriptionValidationResponse> ValidateSubscription(
+        IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
+        Dictionary<string, string> values)
+    {
+        try
+        {
+            var creds = authenticationCredentialsProvider.ToArray();
+            var client = new ContentstackClient(creds);
+
+            var webhook = await FindSubscribedWebhook(client, creds, values);
+            return ValidateWebhook(webhook);
+        }
+        catch (Exception exception)
+        {
+            return Invalid($"Could not verify the Contentstack webhook subscription for '{Event}': {exception.Message}");
+        }
+    }
+
+    internal WebhookSubscriptionValidationResponse ValidateWebhook(WebhookEntity? webhook)
+    {
+        if (webhook is null)
+            return Invalid($"The Contentstack webhook for '{Event}' no longer exists. Republish the Bird to subscribe again.");
+
+        if (webhook.Unhealthy?.State == true)
+            return Invalid($"Contentstack marked the webhook '{webhook.Name}' as unhealthy after repeated failed deliveries and stopped sending events. " +
+                           "Republish the Bird to subscribe again, or enable the webhook in Contentstack under Settings > Webhooks.");
+
+        if (webhook.Disabled == true)
+            return Invalid($"The Contentstack webhook '{webhook.Name}' is disabled. " +
+                           "Enable it in Contentstack under Settings > Webhooks, or republish the Bird to subscribe again.");
+
+        if (!(webhook.Channels ?? []).Contains(Event, StringComparer.OrdinalIgnoreCase))
+            return Invalid($"The Contentstack webhook '{webhook.Name}' no longer listens to the '{Event}' event. Republish the Bird to subscribe again.");
+
+        return new() { IsValid = true };
+    }
+
+    internal static WebhookEntity? FindWebhookByTargetUrl(IEnumerable<WebhookEntity>? webhooks, string targetUrl)
+        => (webhooks ?? []).FirstOrDefault(webhook =>
+            webhook.Destinations?.Any(destination => destination.TargetUrl == targetUrl) == true);
+
+    private async Task<WebhookEntity?> FindSubscribedWebhook(ContentstackClient client,
+        AuthenticationCredentialsProvider[] creds, Dictionary<string, string> values)
+    {
+        var webhooks = await GetAllWebhooks(client, creds);
+        return FindWebhookByTargetUrl(webhooks.Webhooks, values[CredsNames.WebhookUrl]);
+    }
+
+    private static WebhookSubscriptionValidationResponse Invalid(string message)
+        => new() { IsValid = false, Message = message };
 
     private Task<WebhooksResponse> GetAllWebhooks(ContentstackClient client, AuthenticationCredentialsProvider[] creds)
     {
