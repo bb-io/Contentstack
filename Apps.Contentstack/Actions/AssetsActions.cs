@@ -7,6 +7,7 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using Blackbird.Applications.Sdk.Utils.Extensions.System;
 using Blackbird.Applications.Sdk.Utils.Utilities;
 using RestSharp;
@@ -77,8 +78,8 @@ public class AssetsActions(InvocationContext invocationContext, IFileManagementC
         }
 
         var request = new ContentstackRequest($"v3/assets/{input.AssetId}/publish", Method.Post, Creds)
-            .AddHeader("api_version", "3.2")
             .WithJsonBody(body);
+        request.AddHeader("api_version", "3.2");
 
         return await Client.ExecuteWithErrorHandling<NoticeResponse>(request);
     }
