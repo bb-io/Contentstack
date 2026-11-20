@@ -51,6 +51,7 @@ name your connection for future reference e.g. 'My Contentstack connection'.
 ### Assets
 
 - **Download/Upload asset** downloads or uploads content for the asset.
+- **Publish asset** publishes a specific asset to the selected environment and locale immediately or at a scheduled time.
 
 ### Content types
 

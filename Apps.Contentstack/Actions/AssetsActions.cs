@@ -10,6 +10,7 @@ using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.System;
 using Blackbird.Applications.Sdk.Utils.Utilities;
 using RestSharp;
+using System.Globalization;
 
 namespace Apps.Contentstack.Actions;
 
@@ -47,5 +48,38 @@ public class AssetsActions(InvocationContext invocationContext, IFileManagementC
         request.AlwaysMultipartFormData = true;
 
         await Client.ExecuteWithErrorHandling(request);
+    }
+
+    [Action("Publish asset", Description = "Publish a specific asset based on ID")]
+    public async Task<NoticeResponse> PublishAsset(
+        [ActionParameter] AssetRequest input,
+        [ActionParameter] PublishAssetRequest publishRequest)
+    {
+        var getAssetRequest = new ContentstackRequest($"v3/assets/{input.AssetId}", Method.Get, Creds);
+        var asset = await Client.ExecuteWithErrorHandling<AssetResponse>(getAssetRequest);
+
+        var body = new Dictionary<string, object>
+        {
+            {
+                "asset", new
+                {
+                    environments = new[] { publishRequest.Environment },
+                    locales = new[] { publishRequest.Locale }
+                }
+            },
+            { "version", asset.Asset.Version }
+        };
+
+        if (publishRequest.ScheduledAt.HasValue)
+        {
+            body.Add("scheduled_at",
+                publishRequest.ScheduledAt.Value.ToString("o", CultureInfo.InvariantCulture));
+        }
+
+        var request = new ContentstackRequest($"v3/assets/{input.AssetId}/publish", Method.Post, Creds)
+            .AddHeader("api_version", "3.2")
+            .WithJsonBody(body);
+
+        return await Client.ExecuteWithErrorHandling<NoticeResponse>(request);
     }
 }
