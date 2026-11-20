@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+
 namespace Apps.Contentstack.Models.Entities;
 
 public class AssetEntity
@@ -7,6 +9,9 @@ public class AssetEntity
     public string Filename { get; set; } = string.Empty;
 
     public string Title { get; set; } = string.Empty;
+
+    [JsonProperty("_version")]
+    public int Version { get; set; }
     
     public DateTime CreatedAt { get; set; }
 
