@@ -337,6 +337,10 @@ public static class HtmlToJsonConverter
             return;
         }
 
+        var targets = leaves
+            .Select(node => (Node: node, Found: RichTextSpanLocator.Find(node, source, fieldPath)))
+            .ToList();
+        
         var allPlaced = true;
         foreach (var block in markerlessBlocks)
             allPlaced &= TryPlaceMarkerlessBlock(block, fieldPath, source, logger, errors);
@@ -345,10 +349,8 @@ public static class HtmlToJsonConverter
         if (!allPlaced)
             return;
 
-        foreach (var node in leaves)
+        foreach (var (node, (target, path)) in targets)
         {
-            var (target, path) = RichTextSpanLocator.Find(node, source, fieldPath);
-
             if (target is null)
             {
                 Report(errors, logger,
