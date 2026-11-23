@@ -46,6 +46,7 @@ public static class JsonToHtmlConverter
             }
 
             KeepKeysOnContentUnitsOnly(doc.DocumentNode);
+            RichTextSpanLocator.UseParagraphTextIndexes(doc.DocumentNode);
 
             return Encoding.UTF8.GetBytes(doc.DocumentNode.OuterHtml);
         }
@@ -216,13 +217,10 @@ public static class JsonToHtmlConverter
     internal static void SetKey(HtmlNode node, string entryId, string path)
         => node.SetAttributeValue(ConversionConstants.BlackbirdKey, $"{entryId}-{path}");
 
-    private static bool HasKey(HtmlNode node)
-        => node.Attributes[ConversionConstants.BlackbirdKey] is not null;
-
     private static void KeepKeysOnContentUnitsOnly(HtmlNode root)
     {
         root.DescendantsAndSelf()
-            .Where(x => HasKey(x) && x.Descendants().Any(HasKey))
+            .Where(x => x.HasKey() && x.Descendants().Any(d => d.HasKey()))
             .ToList()
             .ForEach(x => x.Attributes.Remove(ConversionConstants.BlackbirdKey));
     }

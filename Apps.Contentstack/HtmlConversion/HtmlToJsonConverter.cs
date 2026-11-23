@@ -1,5 +1,6 @@
 using System.Text;
 using System.Web;
+using Apps.Contentstack.Extensions;
 using Apps.Contentstack.HtmlConversion.Constants;
 using Newtonsoft.Json;
 using Blackbird.Applications.Sdk.Common.Exceptions;
@@ -322,7 +323,7 @@ public static class HtmlToJsonConverter
             return;
 
         var leaves = container.Descendants()
-            .Where(x => x.Attributes[ConversionConstants.PathAttr] is not null)
+            .Where(x => x.IsTextMarker())
             .ToList();
         var markerlessBlocks = MarkerlessBlocks(container);
 
@@ -346,10 +347,9 @@ public static class HtmlToJsonConverter
 
         foreach (var node in leaves)
         {
-            var path = node.Attributes[ConversionConstants.PathAttr].Value!;
-            var relativePath = ToRelativePath(fieldPath, path);
+            var (target, path) = RichTextSpanLocator.Find(node, source, fieldPath);
 
-            if (relativePath is null || Resolve(source, relativePath) is not JValue target)
+            if (target is null)
             {
                 Report(errors, logger,
                     $"Rich text field '{fieldPath}': the file carries text for '{path}', which does not exist in the exported source value. That text was not imported.");
@@ -387,7 +387,7 @@ public static class HtmlToJsonConverter
     private static List<HtmlNode> MarkerlessBlocks(HtmlNode container)
         => container.Descendants()
             .Where(x => x.Attributes[ConversionConstants.BlackbirdKey] is not null
-                        && !x.Descendants().Any(d => d.Attributes[ConversionConstants.PathAttr] is not null)
+                        && !x.Descendants().Any(d => d.IsTextMarker())
                         && !string.IsNullOrWhiteSpace(HttpUtility.HtmlDecode(x.InnerText)))
             .ToList();
 
@@ -432,7 +432,7 @@ public static class HtmlToJsonConverter
         => source.SelectTokens("$..text")
             .Any(x => x.Type == JTokenType.String && !string.IsNullOrWhiteSpace(x.Value<string>()));
 
-    private static string? ToRelativePath(string fieldPath, string path)
+    public static string? ToRelativePath(string fieldPath, string path)
     {
         if (path == fieldPath)
             return string.Empty;
