@@ -35,8 +35,8 @@ public class TestBase
         
         TestFolder = config["TestFolder"] ?? throw new InvalidOperationException("Set TestFolder in appsettings.json");
     }
-    
-    public TestBase()
+
+    protected TestBase()
     {
         FileManager = new FileManager(TestFolder);
     }
