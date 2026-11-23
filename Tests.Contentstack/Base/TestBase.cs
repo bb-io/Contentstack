@@ -13,6 +13,8 @@ public class TestBase
     public TestContext? TestContext { get; set; }
 
     public FileManager FileManager { get; set; }
+    
+    private static string TestFolder { get; }
 
     static TestBase()
     {
@@ -30,18 +32,12 @@ public class TestBase
         {
             AuthenticationCredentialsProviders = group
         }).ToList();
+        
+        TestFolder = config["TestFolder"] ?? throw new InvalidOperationException("Set TestFolder in appsettings.json");
     }
-    
-    public TestBase()
+
+    protected TestBase()
     {
-        FileManager = new FileManager();
-    }
-    
-    public InvocationContext GetInvocationContext(string connectionType)
-    {
-        var context = InvocationContexts.FirstOrDefault(x => 
-            x.AuthenticationCredentialsProviders.Any(y => y.Value == connectionType));
-            
-        return context ?? throw new Exception($"Invocation context not found for: {connectionType}");
+        FileManager = new FileManager(TestFolder);
     }
 }

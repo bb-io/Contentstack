@@ -8,15 +8,10 @@ public class FileManager : IFileManagementClient
     private readonly string _inputFolder;
     private readonly string _outputFolder;
 
-    public FileManager()
+    public FileManager(string testFolder)
     {
-        var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        var projectDirectory = Directory.GetParent(baseDirectory)?.Parent?.Parent?.FullName
-                               ?? throw new InvalidOperationException("Could not determine project directory.");
-        
-        var testFilesPath = Path.Combine(projectDirectory, "TestFiles");
-        _inputFolder = Path.Combine(testFilesPath, "Input");
-        _outputFolder = Path.Combine(testFilesPath, "Output");
+        _inputFolder = Path.Combine(testFolder, "Input");
+        _outputFolder = Path.Combine(testFolder, "Output");
 
         Directory.CreateDirectory(_inputFolder);
         Directory.CreateDirectory(_outputFolder);

@@ -6,6 +6,9 @@ namespace Apps.Contentstack.HtmlConversion;
 
 internal static class RichTextRenderer
 {
+    private const string EmbedType = "reference";
+    private const string InlineDisplayType = "inline";
+
     private static readonly HashSet<string> KnownTags = new(StringComparer.OrdinalIgnoreCase)
     {
         "p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre", "code", "hr", "br",
@@ -56,12 +59,14 @@ internal static class RichTextRenderer
 
     private static void RenderElement(string entryId, HtmlDocument doc, HtmlNode parent, JObject node, int? max)
     {
-        var tag = ResolveTag(node["type"]?.Value<string>());
+        var isInlineEmbed = IsInlineEmbed(node);
+        var tag = isInlineEmbed ? HtmlConstants.Span : ResolveTag(node["type"]?.Value<string>());
         var element = doc.CreateElement(tag);
 
         ApplyAttributes(element, tag, node["attrs"] as JObject);
 
-        if (!InlineTags.Contains(tag) && !VoidTags.Contains(tag) && !string.IsNullOrEmpty(node.Path))
+        var isContentUnit = !InlineTags.Contains(tag) && !VoidTags.Contains(tag);
+        if ((isContentUnit || isInlineEmbed) && !string.IsNullOrEmpty(node.Path))
             JsonToHtmlConverter.SetKey(element, entryId, node.Path);
 
         parent.AppendChild(element);
@@ -97,6 +102,10 @@ internal static class RichTextRenderer
         JsonToHtmlConverter.AppendContent(entryId, doc, target, textProperty, HtmlConstants.Span, max,
             ConversionConstants.RichTextNodeFieldType);
     }
+
+    private static bool IsInlineEmbed(JObject node)
+        => node["type"]?.Value<string>() == EmbedType
+           && node["attrs"]?["display-type"]?.Value<string>() == InlineDisplayType;
 
     private static string ResolveTag(string? type)
         => type is not null && KnownTags.Contains(type) ? type.ToLowerInvariant() : HtmlConstants.Div;
