@@ -220,7 +220,7 @@ public static class JsonToHtmlConverter
     private static void KeepKeysOnContentUnitsOnly(HtmlNode root)
     {
         root.DescendantsAndSelf()
-            .Where(x => x.HasKey() && x.Descendants().Any(d => d.HasKey()))
+            .Where(x => x.HasKey() && x.Descendants().Any(d => d.HasKey() && !d.IsInlineEmbed()))
             .ToList()
             .ForEach(x => x.Attributes.Remove(ConversionConstants.BlackbirdKey));
     }

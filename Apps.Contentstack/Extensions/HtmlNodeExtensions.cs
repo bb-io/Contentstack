@@ -9,6 +9,8 @@ public static class HtmlNodeExtensions
 {
     public static bool HasKey(this HtmlNode node) => node.Attributes[ConversionConstants.BlackbirdKey] is not null;
 
+    public static bool IsInlineEmbed(this HtmlNode node) => node.Name == HtmlConstants.Span && node.HasKey();
+
     public static bool IsTextMarker(this HtmlNode node)
     {
         return node.Attributes[ConversionConstants.PathAttr] is not null ||
